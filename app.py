@@ -26,7 +26,7 @@ class mainWindow(QtGui.QMainWindow):
 		self.app.setLayout(self.mainLayout)
 
 		self.setWindowTitle("NHL Analytics")
-		self.resize(800,500)
+		self.resize(1000,500)
 		self.show()
 
 	def createFileMenu(self):
@@ -130,6 +130,7 @@ class mainWindow(QtGui.QMainWindow):
 		self.mainLayout.removeWidget(widget)
 		widget.close()
 		newFrame = teamsBox(self)
+		newFrame.initUI()
 		self.mainLayout.addWidget(newFrame.window)
 		self.mainLayout.update()
 
