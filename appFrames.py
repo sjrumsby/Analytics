@@ -1,6 +1,7 @@
 from PyQt4 import Qt
 from PyQt4 import QtCore
 from PyQt4 import QtGui
+from models import *
 import settings
 import sqlite3
 import os.path
@@ -130,7 +131,7 @@ class teamsBox(QtGui.QDialog):
 		
 		self.reportBox.setLayout(self.reportBoxLayout)
 		
-	def reportClick(self):
+	def reportClick(self):	
 		teamName = self.teamDropDown.itemData(self.teamDropDown.currentIndex()).toString()
 		result = self.c.execute("SELECT nhl_id, name, position FROM skater WHERE hockey_team_id = %s" % teamName)
 		roster = result.fetchall()
@@ -140,9 +141,9 @@ class teamsBox(QtGui.QDialog):
 		rosterHeader.insert(1, "Position")
 				
 		rosterScroll = QtGui.QScrollArea()
-		rosterTable = QtGui.QTableWidget()
-		rosterTable.setColumnCount(2)
-		rosterTable.setHorizontalHeaderLabels(rosterHeader)
+		self.rosterTable = QtGui.QTableWidget()
+		self.rosterTable.setColumnCount(2)
+		self.rosterTable.setHorizontalHeaderLabels(rosterHeader)
 		
 		insertItems = []
 		
@@ -151,12 +152,14 @@ class teamsBox(QtGui.QDialog):
 			insertItems.append(tempDict)
 		
 		for t in insertItems:
-			row = rosterTable.rowCount()
-			rosterTable.insertRow(row)
-			rosterTable.setItem(row, 0, QtGui.QTableWidgetItem(t['name']))
-			rosterTable.setItem(row, 1, QtGui.QTableWidgetItem(t['position']))
-		
-		rosterScroll.setWidget(rosterTable)
+			row = self.rosterTable.rowCount()
+			self.rosterTable.insertRow(row)
+			nameItem = QtGui.QTableWidgetItem(t['name'])
+			self.rosterTable.setItem(row, 0, nameItem)
+			self.rosterTable.setItem(row, 1, QtGui.QTableWidgetItem(t['position']))
+
+		self.rosterTable.cellClicked.connect(self.rosterTableCellClicked)				
+		rosterScroll.setWidget(self.rosterTable)
 		rosterScroll.setWidgetResizable(True)
 		rosterScroll.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
 		
@@ -169,3 +172,80 @@ class teamsBox(QtGui.QDialog):
 			widget.close()
 			self.reportBoxLayout.addWidget(rosterScroll)
 			self.reportBoxLayout.update()
+	
+	def rosterTableCellClicked(self, row, column):
+		if column == 0:
+			skaterPopUp = QtGui.QDialog(self.parent)
+			cell = self.rosterTable.item(row, column)
+			s = Skater(str(cell.text()))
+			skaterPopUpLayout = QtGui.QVBoxLayout()
+			
+			teamWidget = QtGui.QWidget()
+			teamRowLayout = QtGui.QHBoxLayout()
+			teamLabel = QtGui.QLabel("Team")
+			teamValueLabel = QtGui.QLabel(s.team)
+			teamRowLayout.addWidget(teamLabel)
+			teamRowLayout.addWidget(teamValueLabel)
+			teamWidget.setLayout(teamRowLayout)
+
+			positionWidget = QtGui.QWidget()
+			positionRowLayout = QtGui.QHBoxLayout()
+			positionLabel = QtGui.QLabel("Position")
+			positionValueLabel = QtGui.QLabel(s.position)
+			positionRowLayout.addWidget(positionLabel)
+			positionRowLayout.addWidget(positionValueLabel)
+			positionWidget.setLayout(positionRowLayout)
+			
+			gamesPlayedWidget = QtGui.QWidget()
+			gamesPlayedRowLayout = QtGui.QHBoxLayout()
+			gamesPlayedLabel = QtGui.QLabel("Games Played")
+			gamesPlayedValueLabel = QtGui.QLabel(str(s.gamesPlayed))
+			gamesPlayedRowLayout.addWidget(gamesPlayedLabel)
+			gamesPlayedRowLayout.addWidget(gamesPlayedValueLabel)
+			gamesPlayedWidget.setLayout(gamesPlayedRowLayout)
+			
+			goalsWidget = QtGui.QWidget()
+			goalsRowLayout = QtGui.QHBoxLayout()
+			goalsLabel = QtGui.QLabel("Goals")
+			goalsValueLabel = QtGui.QLabel(str(s.goals))
+			goalsRowLayout.addWidget(goalsLabel)
+			goalsRowLayout.addWidget(goalsValueLabel)
+			goalsWidget.setLayout(goalsRowLayout)
+			
+			assistsWidget = QtGui.QWidget()
+			assistsRowLayout = QtGui.QHBoxLayout()
+			assistsLabel = QtGui.QLabel("Assists")
+			assistsValueLabel = QtGui.QLabel(str(s.assists))
+			assistsRowLayout.addWidget(assistsLabel)
+			assistsRowLayout.addWidget(assistsValueLabel)
+			assistsWidget.setLayout(assistsRowLayout)
+
+			pointsWidget = QtGui.QWidget()
+			pointsRowLayout = QtGui.QHBoxLayout()
+			pointsLabel = QtGui.QLabel("Points")
+			pointsValueLabel = QtGui.QLabel(str(s.points))
+			pointsRowLayout.addWidget(pointsLabel)
+			pointsRowLayout.addWidget(pointsValueLabel)
+			pointsWidget.setLayout(pointsRowLayout)
+			
+			plusMinusWidget = QtGui.QWidget()
+			plusMinusRowLayout = QtGui.QHBoxLayout()
+			plusMinusLabel = QtGui.QLabel("Plus Minus")
+			plusMinusValueLabel = QtGui.QLabel(str(s.plusMinus))
+			plusMinusRowLayout.addWidget(plusMinusLabel)
+			plusMinusRowLayout.addWidget(plusMinusValueLabel)
+			plusMinusWidget.setLayout(plusMinusRowLayout)
+			
+			skaterPopUpLayout.addWidget(teamWidget)
+			skaterPopUpLayout.addWidget(positionWidget)
+			skaterPopUpLayout.addWidget(gamesPlayedWidget)
+			skaterPopUpLayout.addWidget(goalsWidget)
+			skaterPopUpLayout.addWidget(assistsWidget)
+			skaterPopUpLayout.addWidget(pointsWidget)
+			skaterPopUpLayout.addWidget(plusMinusWidget)
+			
+			skaterPopUp.setLayout(skaterPopUpLayout)
+			skaterPopUp.setMinimumWidth(250)
+			skaterPopUp.show()
+			skaterPopUp.setWindowTitle(cell.text())
+			skaterPopUp.activateWindow()
