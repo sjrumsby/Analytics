@@ -12,10 +12,28 @@ class gamesBox(QtGui.QDialog):
 		super(gamesBox, self).__init__()
 		self.parent = parent
 
+		if os.path.exists(settings.database):
+			try:
+				self.con = sqlite3.connect(settings.database)
+				self.c = self.con.cursor()
+				self.c.execute('select id, long_name from hockey_team')
+				self.teams = self.c.fetchall()
+				self.initUI()
+			except:
+				exit("Failure to connect to database")
+		else:
+			self.initNoDBUI()
+
+	def initNoDBUI(self):
+		self.box = QtGui.QGroupBox("Games")
+		self.boxLayout = QtGui.QVBoxLayout()
+		self.boxLayout.addWidget(QtGui.QLabel("Error, no database found. Please run 'Update Database' from the tools menu"), 0, QtCore.Qt.AlignHCenter)
+		self.boxLayout.setAlignment(QtCore.Qt.AlignTop)
+		self.box.setLayout(self.boxLayout)
+		self.window = self.box
+
+	def initUI(self):
 		box = QtGui.QGroupBox("Games")
-
-#Add in all of the Games tab frame
-
 		self.window = box
 
 class homeBox(QtGui.QDialog):
@@ -35,8 +53,6 @@ class homeBox(QtGui.QDialog):
 
 		box.setLayout(self.boxLayout)
 		
-#Add in all of the Home tab frame
-
 		self.window = box
 
 class playBox(QtGui.QDialog):
@@ -44,10 +60,29 @@ class playBox(QtGui.QDialog):
 	def __init__(self, parent):
 		super(playBox, self).__init__()
 		self.parent = parent
-		box = QtGui.QGroupBox("Plays")
-		
-#Add in all of the Play tab frame
 
+		if os.path.exists(settings.database):
+			try:
+				self.con = sqlite3.connect(settings.database)
+				self.c = self.con.cursor()
+				self.c.execute('select id, long_name from hockey_team')
+				self.teams = self.c.fetchall()
+				self.initUI()
+			except:
+				exit("Failure to connect to database")
+		else:
+			self.initNoDBUI()	
+
+	def initNoDBUI(self):
+		self.box = QtGui.QGroupBox("Plays")
+		self.boxLayout = QtGui.QVBoxLayout()
+		self.boxLayout.addWidget(QtGui.QLabel("Error, no database found. Please run 'Update Database' from the tools menu"), 0, QtCore.Qt.AlignHCenter)
+		self.boxLayout.setAlignment(QtCore.Qt.AlignTop)
+		self.box.setLayout(self.boxLayout)
+		self.window = self.box
+
+	def initUI(self):
+		box = QtGui.QGroupBox("Plays")
 		self.window = box
 
 class skatersBox(QtGui.QDialog):
@@ -56,13 +91,33 @@ class skatersBox(QtGui.QDialog):
 		super(skatersBox, self).__init__()
 		self.parent = parent
 
+		if os.path.exists(settings.database):
+			try:
+				self.con = sqlite3.connect(settings.database)
+				self.c = self.con.cursor()
+				self.c.execute('select id, long_name from hockey_team')
+				self.teams = self.c.fetchall()
+				self.initUI()
+			except:
+				exit("Failure to connect to database")
+		else:
+			self.initNoDBUI()	
+
+	def initNoDBUI(self):
+		self.box = QtGui.QGroupBox("Skaters")
+		self.boxLayout = QtGui.QVBoxLayout()
+		self.boxLayout.addWidget(QtGui.QLabel("Error, no database found. Please run 'Update Database' from the tools menu"), 0, QtCore.Qt.AlignHCenter)
+		self.boxLayout.setAlignment(QtCore.Qt.AlignTop)
+		self.box.setLayout(self.boxLayout)
+		self.window = self.box
+
+	def initUI(self):
 		box = QtGui.QGroupBox("Skaters")
-
-#Add in all of the Skaters tab frame
-
 		self.window = box
 
 class teamsBox(QtGui.QDialog):
+	con = None
+	c = None
 	
 	def __init__(self, parent):
 		super(teamsBox, self).__init__()
@@ -72,11 +127,21 @@ class teamsBox(QtGui.QDialog):
 			try:
 				self.con = sqlite3.connect(settings.database)
 				self.c = self.con.cursor()
+				self.c.execute('select id, long_name from hockey_team')
+				self.teams = self.c.fetchall()
+				self.initUI()
 			except:
-				exit("Failure")
-			
-		self.c.execute('select id, long_name from hockey_team')
-		self.teams = self.c.fetchall()
+				exit("Failure to connect to database")
+		else:
+			self.initNoDBUI()
+	
+	def initNoDBUI(self):
+		self.box = QtGui.QGroupBox("Teams")
+		self.boxLayout = QtGui.QVBoxLayout()
+		self.boxLayout.addWidget(QtGui.QLabel("Error, no database found. Please run 'Update Database' from the tools menu"), 0, QtCore.Qt.AlignHCenter)
+		self.boxLayout.setAlignment(QtCore.Qt.AlignTop)
+		self.box.setLayout(self.boxLayout)
+		self.window = self.box
 	
 	def initUI(self):
 		self.box = QtGui.QGroupBox("Teams")
@@ -177,72 +242,77 @@ class teamsBox(QtGui.QDialog):
 		if column == 0:
 			skaterPopUp = QtGui.QDialog(self.parent)
 			cell = self.rosterTable.item(row, column)
-			s = Skater(str(cell.text()))
-			skaterPopUpLayout = QtGui.QVBoxLayout()
-			
-			teamWidget = QtGui.QWidget()
-			teamRowLayout = QtGui.QHBoxLayout()
-			teamLabel = QtGui.QLabel("Team")
-			teamValueLabel = QtGui.QLabel(s.team)
-			teamRowLayout.addWidget(teamLabel)
-			teamRowLayout.addWidget(teamValueLabel)
-			teamWidget.setLayout(teamRowLayout)
+			try:
+				s = Skater(str(cell.text()))
+				skaterPopUpLayout = QtGui.QVBoxLayout()
 
-			positionWidget = QtGui.QWidget()
-			positionRowLayout = QtGui.QHBoxLayout()
-			positionLabel = QtGui.QLabel("Position")
-			positionValueLabel = QtGui.QLabel(s.position)
-			positionRowLayout.addWidget(positionLabel)
-			positionRowLayout.addWidget(positionValueLabel)
-			positionWidget.setLayout(positionRowLayout)
-			
-			gamesPlayedWidget = QtGui.QWidget()
-			gamesPlayedRowLayout = QtGui.QHBoxLayout()
-			gamesPlayedLabel = QtGui.QLabel("Games Played")
-			gamesPlayedValueLabel = QtGui.QLabel(str(s.gamesPlayed))
-			gamesPlayedRowLayout.addWidget(gamesPlayedLabel)
-			gamesPlayedRowLayout.addWidget(gamesPlayedValueLabel)
-			gamesPlayedWidget.setLayout(gamesPlayedRowLayout)
-			
-			goalsWidget = QtGui.QWidget()
-			goalsRowLayout = QtGui.QHBoxLayout()
-			goalsLabel = QtGui.QLabel("Goals")
-			goalsValueLabel = QtGui.QLabel(str(s.goals))
-			goalsRowLayout.addWidget(goalsLabel)
-			goalsRowLayout.addWidget(goalsValueLabel)
-			goalsWidget.setLayout(goalsRowLayout)
-			
-			assistsWidget = QtGui.QWidget()
-			assistsRowLayout = QtGui.QHBoxLayout()
-			assistsLabel = QtGui.QLabel("Assists")
-			assistsValueLabel = QtGui.QLabel(str(s.assists))
-			assistsRowLayout.addWidget(assistsLabel)
-			assistsRowLayout.addWidget(assistsValueLabel)
-			assistsWidget.setLayout(assistsRowLayout)
+				teamWidget = QtGui.QWidget()
+				teamRowLayout = QtGui.QHBoxLayout()
+				teamLabel = QtGui.QLabel("Team")
+				teamValueLabel = QtGui.QLabel(s.team)
+				teamRowLayout.addWidget(teamLabel)
+				teamRowLayout.addWidget(teamValueLabel)
+				teamWidget.setLayout(teamRowLayout)
 
-			pointsWidget = QtGui.QWidget()
-			pointsRowLayout = QtGui.QHBoxLayout()
-			pointsLabel = QtGui.QLabel("Points")
-			pointsValueLabel = QtGui.QLabel(str(s.points))
-			pointsRowLayout.addWidget(pointsLabel)
-			pointsRowLayout.addWidget(pointsValueLabel)
-			pointsWidget.setLayout(pointsRowLayout)
+				positionWidget = QtGui.QWidget()
+				positionRowLayout = QtGui.QHBoxLayout()
+				positionLabel = QtGui.QLabel("Position")
+				positionValueLabel = QtGui.QLabel(s.position)
+				positionRowLayout.addWidget(positionLabel)
+				positionRowLayout.addWidget(positionValueLabel)
+				positionWidget.setLayout(positionRowLayout)
+
+				gamesPlayedWidget = QtGui.QWidget()
+				gamesPlayedRowLayout = QtGui.QHBoxLayout()
+				gamesPlayedLabel = QtGui.QLabel("Games Played")
+				gamesPlayedValueLabel = QtGui.QLabel(str(s.gamesPlayed))
+				gamesPlayedRowLayout.addWidget(gamesPlayedLabel)
+				gamesPlayedRowLayout.addWidget(gamesPlayedValueLabel)
+				gamesPlayedWidget.setLayout(gamesPlayedRowLayout)
+
+				goalsWidget = QtGui.QWidget()
+				goalsRowLayout = QtGui.QHBoxLayout()
+				goalsLabel = QtGui.QLabel("Goals")
+				goalsValueLabel = QtGui.QLabel(str(s.goals))
+				goalsRowLayout.addWidget(goalsLabel)
+				goalsRowLayout.addWidget(goalsValueLabel)
+				goalsWidget.setLayout(goalsRowLayout)
+
+				assistsWidget = QtGui.QWidget()
+				assistsRowLayout = QtGui.QHBoxLayout()
+				assistsLabel = QtGui.QLabel("Assists")
+				assistsValueLabel = QtGui.QLabel(str(s.assists))
+				assistsRowLayout.addWidget(assistsLabel)
+				assistsRowLayout.addWidget(assistsValueLabel)
+				assistsWidget.setLayout(assistsRowLayout)
+
+				pointsWidget = QtGui.QWidget()
+				pointsRowLayout = QtGui.QHBoxLayout()
+				pointsLabel = QtGui.QLabel("Points")
+				pointsValueLabel = QtGui.QLabel(str(s.points))
+				pointsRowLayout.addWidget(pointsLabel)
+				pointsRowLayout.addWidget(pointsValueLabel)
+				pointsWidget.setLayout(pointsRowLayout)
+
+				plusMinusWidget = QtGui.QWidget()
+				plusMinusRowLayout = QtGui.QHBoxLayout()
+				plusMinusLabel = QtGui.QLabel("Plus Minus")
+				plusMinusValueLabel = QtGui.QLabel(str(s.plusMinus))
+				plusMinusRowLayout.addWidget(plusMinusLabel)
+				plusMinusRowLayout.addWidget(plusMinusValueLabel)
+				plusMinusWidget.setLayout(plusMinusRowLayout)
+
+				skaterPopUpLayout.addWidget(teamWidget)
+				skaterPopUpLayout.addWidget(positionWidget)
+				skaterPopUpLayout.addWidget(gamesPlayedWidget)
+				skaterPopUpLayout.addWidget(goalsWidget)
+				skaterPopUpLayout.addWidget(assistsWidget)
+				skaterPopUpLayout.addWidget(pointsWidget)
+				skaterPopUpLayout.addWidget(plusMinusWidget)
 			
-			plusMinusWidget = QtGui.QWidget()
-			plusMinusRowLayout = QtGui.QHBoxLayout()
-			plusMinusLabel = QtGui.QLabel("Plus Minus")
-			plusMinusValueLabel = QtGui.QLabel(str(s.plusMinus))
-			plusMinusRowLayout.addWidget(plusMinusLabel)
-			plusMinusRowLayout.addWidget(plusMinusValueLabel)
-			plusMinusWidget.setLayout(plusMinusRowLayout)
-			
-			skaterPopUpLayout.addWidget(teamWidget)
-			skaterPopUpLayout.addWidget(positionWidget)
-			skaterPopUpLayout.addWidget(gamesPlayedWidget)
-			skaterPopUpLayout.addWidget(goalsWidget)
-			skaterPopUpLayout.addWidget(assistsWidget)
-			skaterPopUpLayout.addWidget(pointsWidget)
-			skaterPopUpLayout.addWidget(plusMinusWidget)
+			except:
+				errorLabel = QtGui.QLabel("Error created skater")
+				skaterPopUpLayout.addWidget(errorLabel)
 			
 			skaterPopUp.setLayout(skaterPopUpLayout)
 			skaterPopUp.setMinimumWidth(250)

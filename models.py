@@ -29,8 +29,10 @@ class Skater():
 			rows = self.c.fetchall()
 			if len(rows) == 1:
 				self.nhlID = rows[0][0]
+			elif len(rows) == 0:
+				raise Exception("No skater found with ID: %s" % self.nhlID)
 			else:
-				exit("Invalid NHL_ID for skater: %s" % nhlID)
+				raise Exception("Too many skaters returned for ID: %s" % self.nhlID)
 		
 		self.c.execute("SELECT skater.name, skater.position, hockey_team.name, hockey_team.long_name FROM skater INNER JOIN hockey_team ON skater.hockey_team_id = hockey_team.id WHERE skater.nhl_id = %s" % self.nhlID)
 		row = self.c.fetchone()
@@ -39,8 +41,26 @@ class Skater():
 		self.teamShort = row[2]
 		self.team = row[3]
 
-'''
 class Game():
+	gameID = 0
+	yearID = 0
+	seasonID = 0
+	homeTeam = 0
+	awayTeam = 0
+	startTime = 0
+	endTime = 0
+	attendance = 0
+	
+	def __init__(gameCode, yearCode, seasonCode):
+		if os.path.exists(settings.database):
+			self.con = sqlite3.connect(settings.database)
+			self.c = self.con.cursor()
+		else:
+			exit ("Failed to open database")
+			
+		
+'''
+class GameParser():
 	gameID = 0
 	yearID = 0
 	seasonID = 0
@@ -58,7 +78,6 @@ class Game():
 		self.sum_parse = summaryParser.summaryParser()
 		self.box_parse = boxParser.boxParser()
 		self.play_parse = playParser.playParser()
-		
 				
 		if Game.objects.filter(game_code=gameID).count() == 0:
 			self.Game = Game.objects.create(game_code=gameID, season_code=seasonID, year_code=yearID)

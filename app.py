@@ -2,7 +2,6 @@ from PyQt4 import Qt, QtCore, QtGui
 from appFrames import *
 import dataScripts
 import settings
-from time import sleep
 
 class mainWindow(QtGui.QMainWindow):
 
@@ -43,16 +42,16 @@ class mainWindow(QtGui.QMainWindow):
 		fileMenu.addAction(exitAction)
 	
 	def createToolsMenu(self):
-		addDataAction = QtGui.QAction('&Add Data', self)
-		addDataAction.setStatusTip('Add data into database')
-		addDataAction.triggered.connect(self.addData)
+		updateDatabaseAction = QtGui.QAction('&Update Database', self)
+		updateDatabaseAction.setStatusTip('Update Database')
+		updateDatabaseAction.triggered.connect(self.updateDatabase)
 		
 		removeDataAction = QtGui.QAction('&Remove Data', self)
 		removeDataAction.setStatusTip('Remove all data from the database')
 		removeDataAction.triggered.connect(self.removeData)
 		
 		toolsMenu = self.menuBar.addMenu('&Tools')
-		toolsMenu.addAction(addDataAction)
+		toolsMenu.addAction(updateDatabaseAction)
 		toolsMenu.addAction(removeDataAction)
 		
 	def createSideMenu(self):
@@ -130,51 +129,32 @@ class mainWindow(QtGui.QMainWindow):
 		self.mainLayout.removeWidget(widget)
 		widget.close()
 		newFrame = teamsBox(self)
-		newFrame.initUI()
 		self.mainLayout.addWidget(newFrame.window)
 		self.mainLayout.update()
 
-	def addData(self):
+	def updateDatabase(self):
 		progress = QtGui.QProgressDialog("Please wait...", "Abort", 0, 100, self)
 		progress.setWindowModality(QtCore.Qt.WindowModal)
 		progress.setAutoReset(True)
 		progress.setAutoClose(True)
 		progress.setMinimum(0)
 		progress.setMaximum(100)
+		progress.setWindowTitle("Updating Database")
+		progress.show()
+		progress.setValue(1)
+		
+		dataScripts.updateDatabase()
+		
+		progress.setValue(100)
+		
+	def addGames(self):
+		progress = QtGui.QProgressDialog("Please wait...", "Abort", self)
+		progress.setWindowModality(QtCore.Qt.WindowModal)
+		progress.setAutoReset(True)
+		progress.setAutoClose(True)
 		progress.setWindowTitle("Adding Data...")
 		progress.show()
-
-		progress.setLabelText("Adding hockey team data...")
-		dataScripts.addHockeyTeamData()
-		progress.setValue(5)
 		
-		progress.setLabelText("Adding miss type data")
-		dataScripts.addMissTypeData()
-		progress.setValue(9)
-		
-		progress.setLabelText("Adding penalty type data")
-		dataScripts.addPenaltyTypeData()
-		progress.setValue(13)
-		
-		progress.setLabelText("Adding play type data")
-		dataScripts.addPlayTypeData()
-		progress.setValue(19)
-		
-		progress.setLabelText("Adding shot type data")
-		dataScripts.addShotTypeData()
-		progress.setValue(23)
-		
-		progress.setLabelText("Adding stop type data")
-		dataScripts.addStopTypeData()
-		progress.setValue(29)
-		
-		progress.setLabelText("Adding zone type data")
-		dataScripts.addZoneTypeData()
-		progress.setValue(34)
-		
-		progress.setLabelText("Adding skater data")
-		progress.setValue(35)			#Has to be updated once to force update of label
-		dataScripts.addSkaterData()
 		progress.setValue(100)
 	
 	def removeData(self):
@@ -189,6 +169,7 @@ class mainWindow(QtGui.QMainWindow):
 		progress.setValue(1)
 
 		dataScripts.removeAllData()
+		
 		progress.setValue(100)
 
 if __name__ == '__main__':
