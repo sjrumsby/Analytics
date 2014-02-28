@@ -170,6 +170,12 @@ class playerParser(HTMLParser):
 class summaryParser(HTMLParser):
 	def __init__(self):
 		HTMLParser.__init__(self)
+		
+		self.home_team_data = []
+		self.home_rec = 0
+		
+		self.away_team_data = []
+		self.away_rec = 0
 
 		self.summary_rec = 0
 		self.summary_data = []
@@ -203,8 +209,17 @@ class summaryParser(HTMLParser):
 	def handle_starttag(self, tag, attributes):
 		if tag == "table":
 			for name,value in attributes:
-				if name =="id" and value =="StdHeader":
+				if name == "id" and value == "Visitor":
+					self.away_rec = 1
+			
+				if name =="id" and value == "GameInfo":
+					self.away_rec = 0
 					self.summary_rec = 1
+
+				if name == "id" and value == "Home":
+					self.home_rec = 1
+					self.summary_rec = 0
+	
 		if self.goal_rec or self.on_ice_rec:
 			if tag == "font":
 				for name,value in attributes:
@@ -214,6 +229,12 @@ class summaryParser(HTMLParser):
 						self.goal_rec = 0
 
 	def handle_data(self, data):
+		if self.home_rec:
+			if data != "" and data != "\r\n" and data != "\r\r\n" and "Match/Game" not in data and "SCORING SUMMARY" not in data:
+				self.home_team_data.append(data)
+		if self.away_rec:
+			if data != "" and data != "\r\n" and data != "\r\r\n" and "Match/Game" not in data and "SCORING SUMMARY" not in data:
+				self.away_team_data.append(data)
 		if self.summary_rec:
 			if data != "\r\n" and data != "\r\r\n" and data != ", " and data != "Sommaire du Match":
 				if self.append:
@@ -229,7 +250,7 @@ class summaryParser(HTMLParser):
 				self.stars_row.append(data)
 
 		if "SCORING SUMMARY" in data:
-			self.summary_rec = 0
+			self.home_rec = 0
 
 		if "3 STARS" in data:
 			self.stars_rec = 1

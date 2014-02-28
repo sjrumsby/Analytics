@@ -2,6 +2,8 @@ import os.path
 import parsers
 import settings
 import sqlite3
+from parsers import summaryParser
+from urllib2 import urlopen
 
 class Skater():
 	nhlID = ""
@@ -42,6 +44,7 @@ class Skater():
 		self.team = row[3]
 
 class Game():
+	id = 0
 	gameID = 0
 	yearID = 0
 	seasonID = 0
@@ -50,133 +53,108 @@ class Game():
 	startTime = 0
 	endTime = 0
 	attendance = 0
+	homeTeamSkaters = {}
+	awayTeamSkaters = {}
 	
-	def __init__(gameCode, yearCode, seasonCode):
+	def __init__(self, gameID, yearID, seasonID):
 		if os.path.exists(settings.database):
 			self.con = sqlite3.connect(settings.database)
 			self.c = self.con.cursor()
 		else:
 			exit ("Failed to open database")
-			
 		
-'''
-class GameParser():
-	gameID = 0
-	yearID = 0
-	seasonID = 0
-	home_players = []
-	away_players = []
-	Game = None
-	sum_parse = None
-	box_parse = None
-	play_parse = None
-	
-	def __init__(self, gameID, yearID, seasonID):
 		self.gameID = gameID
 		self.yearID = yearID
 		self.seasonID = seasonID
-		self.sum_parse = summaryParser.summaryParser()
-		self.box_parse = boxParser.boxParser()
-		self.play_parse = playParser.playParser()
-				
-		if Game.objects.filter(game_code=gameID).count() == 0:
-			self.Game = Game.objects.create(game_code=gameID, season_code=seasonID, year_code=yearID)
-		else:
-			self.Game = Game.objects.filter(season_code=seasonID).filter(game_code=gameID).filter(year_code=yearID)[0]
-			
-		fp = "reports/"+str(self.yearID)+"/BX/BX"+str(self.seasonID).zfill(2)+str(self.gameID).zfill(4)+".HTML"
-		if not os.path.exists(fp):
-			url = "http://www.nhl.com/gamecenter/en/boxscore?id="+str(self.yearID)[0:4]+str(self.seasonID).zfill(2)+str(self.gameID).zfill(4)
-			print url
-			req = urlopen(url)
-			html = req.read()
-		else:
-			f = open(fp, 'r')
-			html = f.read()
-			f.close()
 		
-		self.box_parse.feed(html)
+		self.c.execute("SELECT * FROM game WHERE season_code = %s AND year_code = %s AND game_code = %s" % (seasonID, yearID, gameID))
+		row = self.c.fetchone()
 		
-		fp = "reports/"+str(self.yearID)+"/GS/GS"+str(self.seasonID).zfill(2)+str(self.gameID).zfill(4)+".HTML"
-		if not os.path.exists(fp):
-			url = "http://www.nhl.com/scores/htmlreports/"+str(self.yearID)+"/GS"+str(self.seasonID).zfill(2)+str(self.gameID).zfill(4)+".HTM"
-			print url
-			req = urlopen(url)
-			html = req.read()
+		if row != None:
+			if len(row) == 1:
+				self.homeTeam = row[4]
+				self.homeScore = row[5]
+				self.awayTeam = row[6]
+				self.awayScore = row[7]
+				self.startTime = row[8]
+				self.endTime = row[9]
+				self.attendance = row[10]
+			else:
+				raise Exception("More than one game found")
 		else:
-			f = open(fp, 'r')
-			html = f.read()
-			f.close()
-			
-		self.sum_parse.feed(html)
+			self.makeGame()
 		
-		fp = "reports/"+str(self.yearID)+"/PL/PL"+str(self.seasonID).zfill(2)+str(self.gameID).zfill(4)+".HTML"
-		if not os.path.exists(fp):
-			url = "http://www.nhl.com/scores/htmlreports/"+str(self.yearID)+"/PL"+str(self.seasonID).zfill(2)+str(self.gameID).zfill(4)+".HTM"
-			print url
-			req = urlopen(url)
-			html = req.read()
-		else:
-			f = open(fp, 'r')
-			html = f.read()
-			f.close()
-			
-		self.play_parse.feed(html)
-		
-		if len(self.sum_parse.summary_data) != 21:
-			print "Error in summary parsing."
-			for x in self.sum_parse.summary_data:
-				print x
-			exit()
+		self.con.commit()
 
-	def __str__(self):
-		return "Game id: %s" % self.id
-		
-	def get_player(self, x):
-		return Skater.objects.get(nhl_id=x[1])
-		
-	def get_team_skater(self, number, team):
-		if team == "home":
-			t = Team.objects.filter(number=number, hockey_team=self.Game.home_team)
+	def makeGame(self):
+		fp = "reports/" + self.yearID + "/GS/GS" + self.seasonID + self.gameID + ".HTML"
+		if not os.path.exists(fp):
+			print "Pulling summary data from NHL.com for game: %s" % self.gameID
+			url = "http://www.nhl.com/scores/htmlreports/" + self.yearID + "/GS" + self.seasonID + self.gameID + ".HTM"
+			req = urlopen(url)
+			sum_html = req.read()
 		else:
-			t = Team.objects.filter(number=number, hockey_team=self.Game.away_team)
-		if t.count() == 1:
-			return t[0]
+			f = open(fp, 'r')
+			sum_html = f.read()
+			f.close()
+
+		sumParse = parsers.summaryParser()
+		sumParse.feed(sum_html)
+
+		self.homeTeamID = settings.longNameToID[sumParse.home_team_data[2]]
+		self.homeScore = sumParse.home_team_data[1]
+		self.awayTeamID = settings.longNameToID[sumParse.away_team_data[2]]
+		self.awayScore = sumParse.away_team_data[1]
+		self.startTime = sumParse.summary_data[6]
+		self.endTime = sumParse.summary_data[8]
+		self.attendance = sumParse.summary_data[2].split(" ")[-1].replace(",", "")
+		
+		executeString = "INSERT INTO game(season_code, year_code, game_code, home_team_id, home_score, away_team_id, away_score, start_time, end_time, attendance) VALUES (%s, %s, %s, %s, %s, %s, %s, '%s', '%s', %s)" % (self.seasonID, self.yearID, self.gameID, self.homeTeamID, self.homeScore, self.awayTeamID, self.awayScore, self.startTime, self.endTime, self.attendance)
+		print executeString
+		self.c.execute(executeString)
+		executeString = "SELECT id FROM game WHERE season_code = '%s' AND year_code = '%s' AND game_code = '%s'" % (int(self.seasonID), int(self.yearID), int(self.gameID))
+		self.c.execute(executeString)
+		row = self.c.fetchone()
+		self.id = row[0]
+
+		fp = "reports/" + self.yearID + "/BX/BX" + self.seasonID + self.gameID + ".HTML"
+		if not os.path.exists(fp):
+			print "Pulling boxscore data from NHL.com for game: %s" % gameID
+			url = "http://www.nhl.com/gamecenter/en/boxscore?id=" + self.yearID[0:4] + self.seasonID + self.gameID
+			req = urlopen(url)
+			box_html = req.read()
 		else:
-			return None
+			f = open(fp, 'r')
+			box_html = f.read()
+			f.close()
+
+		boxParse = parsers.boxParser()
+		boxParse.feed(box_html)
 		
-	def game_save(self):
-		self.Game.save()
+		teamInsert = []
 		
-	def parse_game(self):
-		self.Game.home_team = Hockey_Team.objects.filter(long_name=self.sum_parse.summary_data[18])[0]
-		self.Game.away_team = Hockey_Team.objects.filter(long_name=self.sum_parse.summary_data[2])[0]
-		attendance_parts = self.sum_parse.summary_data[6].split(" ")
-		self.Game.attendance = re.sub(",", "", attendance_parts[-1])
-		self.Game.start_time = self.sum_parse.summary_data[10]
-		self.Game.end_time = self.sum_parse.summary_data[12]
-		
-		Team.objects.filter(game=self.Game).delete()
-		
-		for x in self.box_parse.away_skaters:
-			t= Team.objects.create(skater=self.get_player(x), game=self.Game, number = int(x[0]), hockey_team=self.Game.away_team)
-			t.save()
+		for t in boxParse.away_skaters:
+			teamInsert.append([t[1], self.id, t[0], self.awayTeamID])
+			self.awayTeamSkaters[t[0]] = t[1]
+
+		for t in boxParse.away_goalies:
+			teamInsert.append([t[1], self.id, t[0], self.awayTeamID])
+			self.awayTeamSkaters[t[0]] = t[1]
 			
-		for x in self.box_parse.away_goalies:
-			t= Team.objects.create(skater=self.get_player(x), game=self.Game, number = int(x[0]), hockey_team=self.Game.away_team)
-			t.save()
+		for t in boxParse.home_skaters:
+			teamInsert.append([t[1], self.id, t[0], self.awayTeamID])
+			self.homeTeamSkaters[t[0]] = t[1]
 			
-		for x in self.box_parse.home_skaters:
-			t= Team.objects.create(skater=self.get_player(x), game=self.Game, number = int(x[0]), hockey_team=self.Game.home_team)
-			t.save()
-			
-		for x in self.box_parse.home_goalies:
-			t= Team.objects.create(skater=self.get_player(x), game=self.Game, number = int(x[0]), hockey_team=self.Game.home_team)
-			t.save()
+		for t in boxParse.home_goalies:
+			teamInsert.append([t[1], self.id, t[0], self.awayTeamID])
+			self.homeTeamSkaters[t[0]] = t[1]
+
+		executeString = "INSERT INTO team(skater_id, game_id, number, hockey_team_id) VALUES (?, ?, ?, ?)"
+		self.c.executemany("INSERT INTO team(skater_id, game_id, number, hockey_team_id) VALUES (?, ?, ?, ?)", teamInsert)
 
 		stars = []
 		
-		for x in self.sum_parse.stars_data:
+		for x in sumParse.stars_data:
 			number = x[3].split(" ")[0]
 			if x[1] == "S.J":
 				hockey_team_name = "SJS"
@@ -188,70 +166,15 @@ class GameParser():
 				hockey_team_name = "LAK"
 			else:
 				hockey_team_name = x[1]
-			error = 0
-			
-			if self.Game.home_team.name == hockey_team_name:
-				t = Team.objects.filter(game=self.Game, number=number, hockey_team=self.Game.home_team)
-				if len(t) == 1:
-					stars.append(t[0])
-				else:
-					error = 1
-			if self.Game.away_team.name == hockey_team_name:
-				t = Team.objects.filter(game=self.Game, number=number, hockey_team=self.Game.away_team)
-				if len(t) == 1:
-					stars.append(t[0])
-				else:
-					error = 1
-					
-			if error == 1:
-				print "Something went wrong with parameters:"
-				print "GameID: %s" % self.gameID
-				print "seasonID: %s" % self.seasonID
-				print "yearID: %s" % self.yearID
-				print x
-				print "Summary data crap for testing:"
-				for y in self.sum_parse:
-					print y
-				exit()
-		
-		if len(stars) == 3:
-			if Stars.objects.filter(game=self.Game).count() == 0:
-				s = Stars.objects.create(game=self.Game, first = stars[0].skater, second = stars[1].skater, third = stars[2].skater)
+				
+			if self.homeTeamID == settings.shortNameToID[hockey_team_name]:
+				stars.append(self.homeTeamSkaters[number])
 			else:
-				s = Stars.objects.filter(game=self.Game)[0]
-				s.first = stars[0].skater
-				s.second = stars[1].skater
-				s.third = stars[2].skater
-			s.save()
-		self.Game.save()
-		
-		for x in self.play_parse.plays:
-			print "Processing play: %s" % x['play']
-			if Play_Type.objects.filter(name=x['play'][5]).count() == 1:
-				p = Play_Type.objects.filter(name=x['play'][5])[0]
-				p = Play.objects.create(game=self.Game, type=p, description = x['play'][6])
-				p.save()
-				for y in x['home']:
-					p.on_ice.add(self.get_team_skater(y, "home"))
-				for y in x['away']:
-					p.on_ice.add(self.get_team_skater(y, "away"))
-			
-	def parse_plays(self):
-		fp = "reports/"+str(self.yearID)+"/PL/PL"+str(self.seasonID).zfill(2)+str(self.gameID).zfill(4)+".HTML"
-		if not os.path.exists(fp):
-			url = "http://www.nhl.com/scores/htmlreports/"+str(self.yearID)+"/PL"+str(self.seasonID).zfill(2)+str(self.gameID).zfill(4)+".HTM"
-			print url
-			req = urlopen(url)
-			html = req.read()
-		else:
-			f = open(fp, 'r')
-			html = f.read()
-			f.close()
-			
-		self.play_parse.feed(html)
-		
-		for x in self.play_parse.plays:
-			print x['play']
-			print x['home']
-			print x['away']
-'''
+				stars.append(self.awayTeamSkaters[number])	
+		if len(stars) == 3:
+			self.c.execute("INSERT INTO stars(game_id, first_id, second_id, third_id) VALUES (%s, %s, %s, %s)" % (self.id, stars[0], stars[1], stars[2]))
+		elif len(stars) == 1:
+			self.c.execute("INSERT INTO stars(game_id, first_id) VALUES (%s, %s)" % (self.id, stars[0]))
+		elif len(stars) == 2:
+			self.c.execute("INSERT INTO stars(game_id, first_id, second_id) VALUES (%s, %s, %s)" % (self.id, stars[0], stars[1]))
+
