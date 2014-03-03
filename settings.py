@@ -92,6 +92,9 @@ play_types 	= [
 				(11, "SHOT"),
 				(12, "STOP"),
 				(13, "TAKE"),
+				(14, "SOC"),
+				(15, "EISTR"),
+				(16, "EIEND"),
 				]
 
 shot_types 	= [
@@ -116,12 +119,26 @@ stop_types 	= [
 				(10, "Net Off"),
 				(11, "TV Timeout"),
 				]
+
+strength_types = [
+					(1, "SH"),
+					(2, "EV"),
+					(3, "PP"),
+				]
 				
 zone_types 	= [
 				(1, "Offensive"), 
 				(2, "Neutral"),
 				(3, "Defensive"),
 				]
+				
+miss_types_reverse = dict((v,k) for k,v in miss_types)
+penl_types_reverse = dict((v,k) for k,v in penl_types)
+play_types_reverse = dict((v,k) for k,v in play_types)
+shot_types_reverse = dict((v,k) for k,v in shot_types)
+stop_types_reverse = dict((v,k) for k,v in stop_types)
+zone_types_reverse = dict((v,k) for k,v in zone_types)
+strength_types_reverse = dict((v,k) for k,v in strength_types)
 
 #General data structures useful throughout Application
 

@@ -109,8 +109,10 @@ class Game():
 		self.endTime = sumParse.summary_data[8]
 		self.attendance = sumParse.summary_data[2].split(" ")[-1].replace(",", "")
 		
+		if not self.attendance.isdigit():
+			self.attendance = 0
+		
 		executeString = "INSERT INTO game(season_code, year_code, game_code, home_team_id, home_score, away_team_id, away_score, start_time, end_time, attendance) VALUES (%s, %s, %s, %s, %s, %s, %s, '%s', '%s', %s)" % (self.seasonID, self.yearID, self.gameID, self.homeTeamID, self.homeScore, self.awayTeamID, self.awayScore, self.startTime, self.endTime, self.attendance)
-		print executeString
 		self.c.execute(executeString)
 		executeString = "SELECT id FROM game WHERE season_code = '%s' AND year_code = '%s' AND game_code = '%s'" % (int(self.seasonID), int(self.yearID), int(self.gameID))
 		self.c.execute(executeString)
@@ -178,3 +180,41 @@ class Game():
 		elif len(stars) == 2:
 			self.c.execute("INSERT INTO stars(game_id, first_id, second_id) VALUES (%s, %s, %s)" % (self.id, stars[0], stars[1]))
 
+		fp = "reports/" + self.yearID + "/PL/PL" + self.seasonID + self.gameID + ".HTML"
+
+		if not os.path.exists(fp):
+			print "Pulling play-by-play data from NHL.com for game: %s" % self.gameID
+			url = "http://www.nhl.com/scores/htmlreports/" + self.yearID + "/PL" + self.seasonID + self.gameID + ".HTM"
+			print url
+			req = urlopen(url)
+			play_html = req.read()
+		else:
+			f = open(fp, 'r')
+			play_html = f.read()
+			f.close()
+		
+		print "parsing play data"
+		playParse = parsers.playParser()
+		playParse.feed(play_html)
+		
+		insertPlays = []
+		insertFaceOff = []
+		
+		for p in playParse.plays:
+			if p['play'][4] in ["PSTR", "STOP", "PEND", "GEND", "SOC", "EISTR", "EIEND"]:
+				insertPlays.append([self.id, settings.play_types_reverse[p['play'][4]], p['play'][1], p['play'][2], ""]) 
+			else:
+				insertPlays.append([self.id, settings.play_types_reverse[p['play'][5]], p['play'][1], p['play'][3], settings.strength_types_reverse[p['play'][2]]]) 
+
+			if p['play'][5] == "FAC":
+				insertFaceOff.append( { 'play' : self.processFaceOff(p), 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
+
+		
+		for x in insertFaceOff:
+			print x
+			
+		print "parsed"
+		
+	def processFaceOff(self, play):
+		executeString = ""
+		return ["k", "v"]
