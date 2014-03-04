@@ -205,19 +205,27 @@ class Game():
 		
 		for p in playParse.plays:
 			if p['play'][4] in ["PSTR", "STOP", "PEND", "GEND", "SOC", "EISTR", "EIEND"]:
-				self.c.execute("INSERT INTO play("") VALUES ()")
-				insertPlays.append([self.id, settings.play_types_reverse[p['play'][4]], p['play'][1], p['play'][2], ""]) 
+				self.c.execute("INSERT INTO play(game_id, event_id, period, time) VALUES (%s, %s, %s, '%s')" % (self.id, settings.play_types_reverse[p['play'][4]], p['play'][1], p['play'][2]))
 			else:
-				insertPlays.append([self.id, settings.play_types_reverse[p['play'][5]], p['play'][1], p['play'][3], settings.strength_types_reverse[p['play'][2]]]) 
+				executeString = "INSERT INTO play(game_id, event_id, period, time, strength_id) VALUES (%s, %s, %s, '%s', %s)" % (self.id, settings.play_types_reverse[p['play'][5]], p['play'][1], p['play'][4], settings.strength_types_reverse[p['play'][2]] )
+				self.c.execute(executeString)
 
 			if p['play'][5] == "FAC":
 				faceOffPlay = [self.c.lastrowid] 
-				faceOffPlay.append(x for x in self.processFaceOff(p) )
+				
+				for x in self.processFaceOff(p['play'][6]):
+					faceOffPlay.append(x)
 				insertFaceOff.append( { 'play' : faceOffPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
 		
 		for x in insertFaceOff:
-			print x
-			print "\n\n"
+			self.c.execute("INSERT INTO face_off(play_id, winner, loser, zone_id) VALUES (%s, %s, %s, %s)" % (x['play'][0], x['play'][1], x['play'][2], x['play'][3]))
+			face_off_id = self.c.lastrowid
+			
+			for y in x['home']:
+				self.c.execute("INSERT INTO home_face_off_on_ice (face_off_id, skater_id) VALUES (%s, %s)" % (face_off_id, y))
+			
+			for z in x['away']:
+				self.c.execute("INSERT INTO away_face_off_on_ice (face_off_id, skater_id) VALUES (%s, %s)" % (face_off_id, z))
 			
 		print "parsed"
 		
@@ -227,7 +235,7 @@ class Game():
 		zone = parts[0][8:11]
 
 		if zone == "Neu":
-			zone_id = zone_types_reverse["Neutral"]
+			zone_id = settings.zone_types_reverse["Neutral"]
 		elif zone == "Def":
 			zone_id = settings.zone_types_reverse["Defensive"]
 		elif zone == "Off":
@@ -245,12 +253,12 @@ class Game():
 		players = parts[1].split(" vs ")
 
 		playerOneParts = players[0].split("#")
-		playerOneTeam = playerOneParts[0][0:3]
-		playerOneNumber = playerOneParts[1][0:2]
+		playerOneTeam = playerOneParts[0][0:3].strip()
+		playerOneNumber = playerOneParts[1][0:2].strip()
 
 		playerTwoParts = players[1].split("#")
-		playerTwoTeam = playerTwoParts[0][0:3]
-		playerTwoNumber = playerTwoParts[1][0:2]
+		playerTwoTeam = playerTwoParts[0][0:3].strip()
+		playerTwoNumber = playerTwoParts[1][0:2].strip()
 
 		if self.homeTeam == settings.shortNameToID[playerOneTeam]:
 			winner = self.homeTeamSkaters[playerOneNumber]
