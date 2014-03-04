@@ -82,16 +82,19 @@ class Game():
 			else:
 				raise Exception("More than one game found")
 		else:
-			self.makeGame()
+			self.create()
 		
 		self.con.commit()
 
-	def makeGame(self):
+	def create(self):
 		fp = "reports/" + self.yearID + "/GS/GS" + self.seasonID + self.gameID + ".HTML"
 		if not os.path.exists(fp):
 			print "Pulling summary data from NHL.com for game: %s" % self.gameID
 			url = "http://www.nhl.com/scores/htmlreports/" + self.yearID + "/GS" + self.seasonID + self.gameID + ".HTM"
-			req = urlopen(url)
+			try:
+				req = urlopen(url)
+			except:
+				print url
 			sum_html = req.read()
 		else:
 			f = open(fp, 'r')
@@ -202,19 +205,74 @@ class Game():
 		
 		for p in playParse.plays:
 			if p['play'][4] in ["PSTR", "STOP", "PEND", "GEND", "SOC", "EISTR", "EIEND"]:
+				self.c.execute("INSERT INTO play("") VALUES ()")
 				insertPlays.append([self.id, settings.play_types_reverse[p['play'][4]], p['play'][1], p['play'][2], ""]) 
 			else:
 				insertPlays.append([self.id, settings.play_types_reverse[p['play'][5]], p['play'][1], p['play'][3], settings.strength_types_reverse[p['play'][2]]]) 
 
 			if p['play'][5] == "FAC":
-				insertFaceOff.append( { 'play' : self.processFaceOff(p), 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
-
+				faceOffPlay = [self.c.lastrowid] 
+				faceOffPlay.append(x for x in self.processFaceOff(p) )
+				insertFaceOff.append( { 'play' : faceOffPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
 		
 		for x in insertFaceOff:
 			print x
+			print "\n\n"
 			
 		print "parsed"
 		
 	def processFaceOff(self, play):
-		executeString = ""
-		return ["k", "v"]
+		parts = play.split(" - ")
+		winningTeam = parts[0][0:3]
+		zone = parts[0][8:11]
+
+		if zone == "Neu":
+			zone_id = zone_types_reverse["Neutral"]
+		elif zone == "Def":
+			zone_id = settings.zone_types_reverse["Defensive"]
+		elif zone == "Off":
+			zone_id = settings.zone_types_reverse["Offensive"]
+		else:
+			print "An unknown error occured processing the play: %s" % play
+		
+		if settings.shortNameToID[winningTeam] == self.homeTeam:
+			winningTeamID = self.homeTeam
+			losingTeamID = self.awayTeam
+		else:
+			winningTeamID = self.awayTeam
+			winningTeamID = self.homeTeam
+
+		players = parts[1].split(" vs ")
+
+		playerOneParts = players[0].split("#")
+		playerOneTeam = playerOneParts[0][0:3]
+		playerOneNumber = playerOneParts[1][0:2]
+
+		playerTwoParts = players[1].split("#")
+		playerTwoTeam = playerTwoParts[0][0:3]
+		playerTwoNumber = playerTwoParts[1][0:2]
+
+		if self.homeTeam == settings.shortNameToID[playerOneTeam]:
+			winner = self.homeTeamSkaters[playerOneNumber]
+			loser = self.awayTeamSkaters[playerTwoNumber]
+		else:
+			winner = self.homeTeamSkaters[playerTwoNumber]
+			loser = self.awayTeamSkaters[playerOneNumber]
+
+		return [winner, loser, zone_id]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
