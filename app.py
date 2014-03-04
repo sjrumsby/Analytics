@@ -1,5 +1,9 @@
-from PyQt4 import Qt, QtCore, QtGui
-from appFrames import *
+from PyQt4 import QtCore, QtGui
+from teamFrame import *
+from skaterFrame import *
+from playFrame import *
+from homeFrame import *
+from gamesFrame import *
 import dataScripts
 import settings
 
