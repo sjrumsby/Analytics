@@ -26,6 +26,36 @@ play_table				= 'CREATE TABLE "play" ("id" integer NOT NULL PRIMARY KEY, "game_i
 
 face_off_table			= 'CREATE TABLE "face_off" ("id" integer NOT NULL PRIMARY KEY, "winner" integer NOT NULL REFERENCES "skater" ("id"), "loser" integer NOT NULL REFERENCES "skater" ("id"), "zone_id" integer NOT NULL REFERENCES "zone_types" ("id") );'
 
-home_face_off_on_ice 	= 'CREATE TABLE "home_face_off_on_ice" ("id" integer NOT NULL PRIMARY KEY, "face_off_id" NOT NULL REFERENCES "face_off" ("id"), "team_id" NOT NULL REFERENCES "team" ("id") );'
+home_face_off_on_ice 	= 'CREATE TABLE "home_face_off_on_ice" ("id" integer NOT NULL PRIMARY KEY, "face_off_id" integer NOT NULL REFERENCES "face_off" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
 
-away_face_off_on_ice 	= 'CREATE TABLE "away_face_off_on_ice" ("id" integer NOT NULL PRIMARY KEY, "face_off_id" NOT NULL REFERENCES "face_off" ("id"), "team_id" NOT NULL REFERENCES "team" ("id") );'
+away_face_off_on_ice 	= 'CREATE TABLE "away_face_off_on_ice" ("id" integer NOT NULL PRIMARY KEY, "face_off_id" integer NOT NULL REFERENCES "face_off" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+block_table				= 'CREATE TABLE "block" ("id" integer NOT NULL PRIMARY KEY, "shooter" integer NOT NULL REFERENCES skater ("id"), "blocker" integer NOT NULL REFERENCES skater ("id"), "shot_type_id" integer NOT NULL REFERENCES shot_type ("id"), "zone_type_id" integer NOT NULL REFERENCES zone_type ("id") );'
+
+home_block_on_ice 		= 'CREATE TABLE "home_block_on_ice" ("id" integer NOT NULL PRIMARY KEY, "block_id" integer NOT NULL REFERENCES "block" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+away_block_on_ice 		= 'CREATE TABLE "away_block_on_ice" ("id" integer NOT NULL PRIMARY KEY, "block_id" integer NOT NULL REFERENCES "block" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+shot_table				= 'CREATE TABLE "shot" ("id" integer NOT NULL PRIMARY KEY, "shooter" integer NOT NULL REFERENCES skater ("id"), "shot_type_id" integer NOT NULL REFERENCES shot_type ("id"), "zone_type_id" integer NOT NULL REFERENCES zone_type ("id"), "distance" integer NOT NULL );'
+
+home_shot_on_ice 		= 'CREATE TABLE "home_shot_on_ice" ("id" integer NOT NULL PRIMARY KEY, "shot_id" integer NOT NULL REFERENCES "shot" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+away_shot_on_ice 		= 'CREATE TABLE "away_shot_on_ice" ("id" integer NOT NULL PRIMARY KEY, "shot_id" integer NOT NULL REFERENCES "shot" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+hit_table				= 'CREATE TABLE "hit" ("id" integer NOT NULL PRIMARY KEY, "hitter" integer NOT NULL REFERENCES skater ("id"), "hittee" integer NOT NULL REFERENCES skater ("id"), "zone_type_id" integer NOT NULL REFERENCES "zone_type" ("id") );'
+
+home_hit_on_ice 		= 'CREATE TABLE "home_hit_on_ice" ("id" integer NOT NULL PRIMARY KEY, "hit_id" integer NOT NULL REFERENCES "hit" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+away_hit_on_ice 		= 'CREATE TABLE "away_hit_on_ice" ("id" integer NOT NULL PRIMARY KEY, "hit_id" integer NOT NULL REFERENCES "hit" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+stop_table				= 'CREATE TABLE "stop" ("id" integer NOT NULL PRIMARY KEY, "stop_type_id" integer NOT NULL REFERENCES stop_type ("id") );'
+
+home_stop_on_ice 		= 'CREATE TABLE "home_stop_on_ice" ("id" integer NOT NULL PRIMARY KEY, "stop_id" integer NOT NULL REFERENCES "stop" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+away_stop_on_ice 		= 'CREATE TABLE "away_stop_on_ice" ("id" integer NOT NULL PRIMARY KEY, "stop_id" integer NOT NULL REFERENCES "stop" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+miss_table				= 'CREATE TABLE "miss" ("id" integer NOT NULL PRIMARY KEY, "shooter" integer NOT NULL REFERENCES skater ("id"), "miss_type_id" integer NOT NULL REFERENCES miss_type ("id"), "shot_type_id" integer NOT NULL REFERENCES shot_type ("id"), "zone_type_id" integer NOT NULL REFERENCES zone_type ("id"), "distance" integer NOT NULL );'
+
+home_miss_on_ice 		= 'CREATE TABLE "home_miss_on_ice" ("id" integer NOT NULL PRIMARY KEY, "miss_id" integer NOT NULL REFERENCES "miss" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+away_miss_on_ice 		= 'CREATE TABLE "away_miss_on_ice" ("id" integer NOT NULL PRIMARY KEY, "miss_id" integer NOT NULL REFERENCES "miss" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'

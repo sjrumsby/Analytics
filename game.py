@@ -4,14 +4,20 @@ import settings
 import sqlite3
 from parsers import summaryParser, boxParser, playParser
 from urllib2 import urlopen
+import sys
+import traceback
 
 class Game():
 	id = 0
 	gameID = 0
 	yearID = 0
 	seasonID = 0
-	homeTeam = 0
+	homeTeam = ""
+	homeTeamShortName = ""
+	homeTeamID = 0
 	awayTeam = 0
+	awayTeamShortName = ""
+	awayTeamID = 0
 	startTime = 0
 	endTime = 0
 	attendance = 0
@@ -48,10 +54,9 @@ class Game():
 		
 		self.con.commit()
 
-	def create(self):
+	def create(self):				
 		fp = "reports/" + self.yearID + "/GS/GS" + self.seasonID + self.gameID + ".HTML"
 		if not os.path.exists(fp):
-			print "Pulling summary data from NHL.com for game: %s" % self.gameID
 			url = "http://www.nhl.com/scores/htmlreports/" + self.yearID + "/GS" + self.seasonID + self.gameID + ".HTM"
 			try:
 				req = urlopen(url)
@@ -66,10 +71,16 @@ class Game():
 		sumParse = parsers.summaryParser()
 		sumParse.feed(sum_html)
 
-		self.homeTeamID = settings.longNameToID[sumParse.home_team_data[2]]
+		self.homeTeam = sumParse.home_team_data[2].strip()
+		self.homeTeamShortName = settings.longNameToShortName[self.homeTeam]
+		self.homeTeamID = settings.longNameToID[self.homeTeam]
 		self.homeScore = sumParse.home_team_data[1]
-		self.awayTeamID = settings.longNameToID[sumParse.away_team_data[2]]
+		
+		self.awayTeam = sumParse.away_team_data[2].strip()
+		self.awayTeamShortName = settings.longNameToShortName[self.awayTeam]
+		self.awayTeamID = settings.longNameToID[self.awayTeam]
 		self.awayScore = sumParse.away_team_data[1]
+		
 		self.startTime = sumParse.summary_data[6]
 		self.endTime = sumParse.summary_data[8]
 		self.attendance = sumParse.summary_data[2].split(" ")[-1].replace(",", "")
@@ -86,7 +97,6 @@ class Game():
 
 		fp = "reports/" + self.yearID + "/BX/BX" + self.seasonID + self.gameID + ".HTML"
 		if not os.path.exists(fp):
-			print "Pulling boxscore data from NHL.com for game: %s" % gameID
 			url = "http://www.nhl.com/gamecenter/en/boxscore?id=" + self.yearID[0:4] + self.seasonID + self.gameID
 			req = urlopen(url)
 			box_html = req.read()
@@ -123,21 +133,13 @@ class Game():
 		
 		for x in sumParse.stars_data:
 			number = x[3].split(" ")[0]
-			if x[1] == "S.J":
-				hockey_team_name = "SJS"
-			elif x[1] == "N.J":
-				hockey_team_name = "NJD"
-			elif x[1] == "T.B":
-				hockey_team_name = "TBL"
-			elif x[1] == "L.A":
-				hockey_team_name = "LAK"
-			else:
-				hockey_team_name = x[1]
+			hockey_team_name = self.convertHockeyTeamName(x[1])
 				
 			if self.homeTeamID == settings.shortNameToID[hockey_team_name]:
 				stars.append(self.homeTeamSkaters[number])
 			else:
 				stars.append(self.awayTeamSkaters[number])	
+				
 		if len(stars) == 3:
 			self.c.execute("INSERT INTO stars(game_id, first_id, second_id, third_id) VALUES (%s, %s, %s, %s)" % (self.id, stars[0], stars[1], stars[2]))
 		elif len(stars) == 1:
@@ -148,7 +150,6 @@ class Game():
 		fp = "reports/" + self.yearID + "/PL/PL" + self.seasonID + self.gameID + ".HTML"
 
 		if not os.path.exists(fp):
-			print "Pulling play-by-play data from NHL.com for game: %s" % self.gameID
 			url = "http://www.nhl.com/scores/htmlreports/" + self.yearID + "/PL" + self.seasonID + self.gameID + ".HTM"
 			print url
 			req = urlopen(url)
@@ -158,29 +159,91 @@ class Game():
 			play_html = f.read()
 			f.close()
 		
-		print "parsing play data"
 		playParse = parsers.playParser()
 		playParse.feed(play_html)
 		
-		insertPlays = []
-		insertFaceOff = []
+		insertPlays 	= []
+		insertFaceOff	= []
+		insertBlock	 	= []
+		insertShot 		= []
+		insertMiss 		= []
+		insertHit 		= []
+		insertStop 		= []
 		
-		for p in playParse.plays:
-			if p['play'][4] in ["PSTR", "STOP", "PEND", "GEND", "SOC", "EISTR", "EIEND"]:
-				self.c.execute("INSERT INTO play(game_id, event_id, period, time) VALUES (%s, %s, %s, '%s')" % (self.id, settings.play_types_reverse[p['play'][4]], p['play'][1], p['play'][2]))
-			else:
-				executeString = "INSERT INTO play(game_id, event_id, period, time, strength_id) VALUES (%s, %s, %s, '%s', %s)" % (self.id, settings.play_types_reverse[p['play'][5]], p['play'][1], p['play'][4], settings.strength_types_reverse[p['play'][2]] )
-				self.c.execute(executeString)
+		try:
+			for p in playParse.plays:
+				if p['play'][4] in ["PSTR", "STOP", "PEND", "GEND", "SOC", "EISTR", "EIEND"]:
+					executeString = "INSERT INTO play(game_id, event_id, period, time) VALUES (%s, %s, %s, '%s')" % (self.id, settings.play_types_reverse[p['play'][4]], p['play'][1], p['play'][2])
+					if settings.debug: print executeString
+					self.c.execute(executeString)
+					
+					if p['play'][4] == "STOP":
 
-			if p['play'][5] == "FAC":
-				faceOffPlay = [self.c.lastrowid] 
-				
-				for x in self.processFaceOff(p['play'][6]):
-					faceOffPlay.append(x)
-				insertFaceOff.append( { 'play' : faceOffPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
-		
+						stopPlay = [self.c.lastrowid]
+
+						for x in self.processStop(p['play'][5]):
+							hitPlay.append(x)
+
+						insertStop.append( { 'play' : stopPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
+				else:
+					executeString = "INSERT INTO play(game_id, event_id, period, time, strength_id) VALUES (%s, %s, %s, '%s', %s)" % (self.id, settings.play_types_reverse[p['play'][5]], p['play'][1], p['play'][4], settings.strength_types_reverse[p['play'][2]] )
+					if settings.debug: print executeString
+					self.c.execute(executeString)
+
+					if p['play'][5] == "FAC":
+						faceOffPlay = [self.c.lastrowid] 
+
+						for x in self.processFaceOff(p['play'][6]):
+							faceOffPlay.append(x)
+
+						insertFaceOff.append( { 'play' : faceOffPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
+
+					elif p['play'][5] == "BLOCK":
+						blockPlay = [self.c.lastrowid]
+
+						for x in self.processBlock(p['play'][6]):
+							blockPlay.append(x)
+
+						insertBlock.append( { 'play' : faceOffPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
+
+					elif p['play'][5] == "SHOT":
+						shotPlay = [self.c.lastrowid]
+
+						for x in self.processShot(p['play'][6]):
+							shotPlay.append(x)
+
+						insertShot.append( { 'play' : shotPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
+
+					elif p['play'][5] == "MISS":
+						missPlay = [self.c.lastrowid]
+
+						for x in self.processMiss(p['play'][6]):
+							missPlay.append(x)
+
+						insertMiss.append( { 'play' : missPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
+
+					elif p['play'][5] == "HIT":
+						hitPlay = [self.c.lastrowid]
+
+						for x in self.processHit(p['play'][6]):
+							hitPlay.append(x)
+
+						insertHit.append( { 'play' : hitPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
+
+		except Exception as e:
+			if p['play'][4] != "GOFF":
+				print "An unknown error occured: %s" % e.message
+				print"\n"
+				print sys.exc_info()
+				print "\n"
+				print traceback.print_tb(sys.exc_info()[2])
+				print "\n"
+				print p
+
 		for x in insertFaceOff:
-			self.c.execute("INSERT INTO face_off(play_id, winner, loser, zone_id) VALUES (%s, %s, %s, %s)" % (x['play'][0], x['play'][1], x['play'][2], x['play'][3]))
+			executeString = "INSERT INTO face_off(play_id, winner, loser, zone_id) VALUES (%s, %s, %s, %s)" % (x['play'][0], x['play'][1], x['play'][2], x['play'][3])
+			if settings.debug: print executeString
+			self.c.execute(executeString)
 			face_off_id = self.c.lastrowid
 			
 			for y in x['home']:
@@ -188,24 +251,99 @@ class Game():
 			
 			for z in x['away']:
 				self.c.execute("INSERT INTO away_face_off_on_ice (face_off_id, skater_id) VALUES (%s, %s)" % (face_off_id, z))
+		
+		for x in insertBlock:
+			executeString = "INSERT INTO block(shooter, blocker, shot_type_id, zone_type_id) VALUES (%s, %s, %s, %s)" % (x['play'][0], x['play'][1], x['play'][2], x['play'][3])
+			if settings.debug: print executeString
+			self.c.execute(executeString)
+			block_id = self.c.lastrowid
 			
-		print "parsed"
+			for y in x['home']:
+				self.c.execute("INSERT INTO home_block_on_ice (block_id, skater_id) VALUES (%s, %s)" % (block_id, y))
+			
+			for z in x['away']:
+				self.c.execute("INSERT INTO away_block_on_ice (block_id, skater_id) VALUES (%s, %s)" % (block_id, z))
+
+		for x in insertShot:
+			executeString = "INSERT INTO shot(shooter, shot_type_id, zone_type_id, distance) VALUES (%s, %s, %s, %s)" % (x['play'][0], x['play'][1], x['play'][2], x['play'][3])
+			if settings.debug: print executeString
+			self.c.execute(executeString)
+			shot_id = self.c.lastrowid
+
+			for y in x['home']:
+				self.c.execute("INSERT INTO home_shot_on_ice (shot_id, skater_id) VALUES (%s, %s)" % (shot_id, y))
+			
+			for z in x['away']:
+				self.c.execute("INSERT INTO away_shot_on_ice (shot_id, skater_id) VALUES (%s, %s)" % (shot_id, z))
+				
+		for x in insertMiss:
+			executeString = "INSERT INTO miss(shooter, miss_type_id, shot_type_id, zone_type_id, distance) VALUES (%s, %s, %s, %s, %s)" % (x['play'][0], x['play'][1], x['play'][2], x['play'][3], x['play'][4])
+			if settings.debug: print executeString
+			self.c.execute(executeString)
+			miss_id = self.c.lastrowid
+			
+			for y in x['home']:
+				self.c.execute("INSERT INTO home_miss_on_ice (miss_id, skater_id) VALUES (%s, %s)" % (miss_id, y))
+			
+			for z in x['away']:
+				self.c.execute("INSERT INTO away_miss_on_ice (miss_id, skater_id) VALUES (%s, %s)" % (miss_id, z))
+				
+		for x in insertHit:
+			executeString = "INSERT INTO hit(hitter, hittee, zone_type_id) VALUES (%s, %s, %s)" % (x['play'][0], x['play'][1], x['play'][2])
+			if settings.debug: print executeString
+			self.c.execute(executeString)
+			hit_id = self.c.lastrowid
+			
+			for y in x['home']:
+				self.c.execute("INSERT INTO home_hit_on_ice (hit_id, skater_id) VALUES (%s, %s)" % (hit_id, y))
+			
+			for z in x['away']:
+				self.c.execute("INSERT INTO away_hit_on_ice (hit_id, skater_id) VALUES (%s, %s)" % (hit_id, z))
+				
+		for x in insertStop:
+			executeString = "INSERT INTO stop(stop_type_id) VALUES (%s)" % x['play'][0]
+			if settings.debug: print executeString
+			self.c.execute(executeString)
+			stop_id = self.c.lastrowid
+			
+			for y in x['home']:
+				self.c.execute("INSERT INTO home_stop_on_ice (stop_id, skater_id) VALUES (%s, %s)" % (stop_id, y))
+				
+			for z in x['away']:
+				self.c.execute("INSERT INTO away_stop_on_ice (stop_id, skater_id) VALUES (%s, %s)" % (stop_id, z))
+				
+#All of the functions for parsing the data out of individual plays
+
+	def convertHockeyTeamName(self, team):
+		if team == "S.J":
+			return "SJS"
+		elif team == "N.J":
+			return "NJD"
+		elif team == "T.B":
+			return "TBL"
+		elif team == "L.A":
+			return "LAK"
+		else:
+			return team
+			
+	def convertZoneName(self, zone):
+		if zone == "Neu":
+			return settings.zone_types_reverse["Neutral"]
+		elif zone == "Def":
+			return settings.zone_types_reverse["Defensive"]
+		elif zone == "Off":
+			return settings.zone_types_reverse["Offensive"]
+		else:
+			print "An unknown error occured processing the zone: %s" % zone
 		
 	def processFaceOff(self, play):
 		parts = play.split(" - ")
-		winningTeam = parts[0][0:3]
+		winningTeam = self.convertHockeyTeamName(parts[0][0:3])
 		zone = parts[0][8:11]
-
-		if zone == "Neu":
-			zone_id = settings.zone_types_reverse["Neutral"]
-		elif zone == "Def":
-			zone_id = settings.zone_types_reverse["Defensive"]
-		elif zone == "Off":
-			zone_id = settings.zone_types_reverse["Offensive"]
-		else:
-			print "An unknown error occured processing the play: %s" % play
 		
-		if settings.shortNameToID[winningTeam] == self.homeTeam:
+		zone_id = self.convertZoneName(zone)
+		
+		if settings.shortNameToID[winningTeam] == self.homeTeamID:
 			winningTeamID = self.homeTeam
 			losingTeamID = self.awayTeam
 		else:
@@ -215,14 +353,14 @@ class Game():
 		players = parts[1].split(" vs ")
 
 		playerOneParts = players[0].split("#")
-		playerOneTeam = playerOneParts[0][0:3].strip()
+		playerOneTeam = self.convertHockeyTeamName(playerOneParts[0][0:3].strip())
 		playerOneNumber = playerOneParts[1][0:2].strip()
 
 		playerTwoParts = players[1].split("#")
-		playerTwoTeam = playerTwoParts[0][0:3].strip()
+		playerTwoTeam = self.convertHockeyTeamName(playerTwoParts[0][0:3].strip())
 		playerTwoNumber = playerTwoParts[1][0:2].strip()
 
-		if self.homeTeam == settings.shortNameToID[playerOneTeam]:
+		if self.homeTeamID == settings.shortNameToID[playerOneTeam]:
 			winner = self.homeTeamSkaters[playerOneNumber]
 			loser = self.awayTeamSkaters[playerTwoNumber]
 		else:
@@ -231,14 +369,130 @@ class Game():
 
 		return [winner, loser, zone_id]
 
+	def processBlock(self, play):
+		parts = play.split(" BLOCKED BY ")
+		shootingTeam = self.convertHockeyTeamName(parts[0][0:3])
+		shooter = parts[0].split("#")[1][0:2].strip()
+		parts = parts[1].split(", ")
+		blocker = parts[0].split("#")[1][0:2].strip()
+		shot_type_id = settings.shot_types_reverse[parts[1].strip()]
+		zone_type_id = self.convertZoneName(parts[2].split(". ")[0].strip())
+				
+		if self.homeTeamID == settings.shortNameToID[shootingTeam]:
+			shooter = self.homeTeamSkaters[shooter]
+			blocker = self.awayTeamSkaters[blocker]
+		else:
+			blocker = self.homeTeamSkaters[blocker]
+			shooter = self.awayTeamSkaters[shooter]
+			
+		return [shooter, blocker, shot_type_id, zone_type_id]
 
+	def processShot(self, play):
+		team = play[0:3]
+		
+		parts = play.split('#')
+		shooter = parts[1][0:2].strip()
+		parts = parts[1].split(", ")
+		
+		if len(parts) == 4:
+			shot_type_id = settings.shot_types_reverse[parts[1].strip()]
+			zone_type_id = self.convertZoneName(parts[2].split(". ")[0].strip())
+			distance = parts[3].split(" ")[0].strip()
 
+		else:
+#Gotta add some shit here to process penalty shots
+			shot_type_id = settings.shot_types_reverse[parts[2].strip()]
+			zone_type_id = self.convertZoneName(parts[3].split(". ")[0].strip())
+			distance = parts[4].split(" ")[0].strip()
 
+		if self.homeTeamID == settings.shortNameToID[team]:
+			shooter = self.homeTeamSkaters[shooter]
+		else:
+			shooter = self.awayTeamSkaters[shooter]
+		
+		return [shooter, shot_type_id, zone_type_id, distance]
+		
+	def processMiss(self, play):
+		team = play[0:3]
+		
+		parts = play.split("#")
+		shooter = parts[1][0:2].strip()
+		parts = parts[1].split(", ")
+		shot_type_id = settings.shot_types_reverse[parts[1].strip()]
+		
+		shot = parts[2].strip()
+		
+		if shot == "Wide of Net":
+			miss_type_id = settings.miss_types_reverse["Wide"]
+		elif shot == "Hit Crossbar":
+			miss_type_id = settings.miss_types_reverse["Crossbar"]
+		elif shot == "Goalpost":
+			miss_type_id = settings.miss_types_reverse["Post"]
+		elif shot == "Over Net":
+			miss_type_id = settings.miss_types_reverse["Over"]
+		else:
+			raise Exception("An unknown miss type was found for play: %s" % play)
+		
+		zone_type_id = self.convertZoneName(parts[3].split(". ")[0].strip())
+		distance = parts[4].split(" ")[0].strip()
+		
+		if self.homeTeamID == settings.shortNameToID[team]:
+			shooter = self.homeTeamSkaters[shooter]
+		else:
+			shooter = self.awayTeamSkaters[shooter]
+			
+		return [shooter, miss_type_id, shot_type_id, zone_type_id, distance]
 
-
-
-
-
+	def processHit(self, play):
+		team = play[0:3]
+		
+		parts = play.split("#")
+		hitter = parts[1][0:2].strip()
+		hittee = parts[2][0:2].strip()
+		zone_type_id = self.convertZoneName(parts[2].split(", ")[1].split(". ")[0].strip())
+		
+		if self.homeTeamID == settings.shortNameToID[team]:
+			hitter = self.homeTeamSkaters[hitter]
+			hittee = self.awayTeamSkaters[hittee]
+		else:
+			hitter = self.awayTeamSkaters[hitter]
+			hittee = self.homeTeamSkaters[hittee]
+		
+		return [hitter, hittee, zone_type_id]
+	
+	def processStop(self,play):
+		play = play.split(",")[0].strip()
+	
+		if play == "PUCK FROZEN":
+			stop_type_id = settings.stop_types_reverse["Frozen"]
+		elif play == "GOALIE STOPPED":
+			stop_type_id = settings.stop_types_reverse["Goalie"]
+		elif play == "ICING":
+			stop_type_id = settings.stop_types_reverse["Icing"]
+		elif play == "HAND PASS":
+			stop_type_id = settings.stop_types_reverse["Hand Pass"]
+		elif play == "HIGH STICK":
+			stop_type_id = settings.stop_types_reverse["High Stick"]
+		elif play == "PLAYER INJURY": 
+			stop_type_id = settings.stop_types_reverse["Injury"]
+		elif play == "PUCK IN BENCHES":
+			stop_type_id = settings.stop_types_reverse["In Benches"]
+		elif play == "PUCK IN CROWD":
+			stop_type_id = settings.stop_types_reverse["In Crowd"]
+		elif play == "PUCK IN NETTING":
+			stop_type_id = settings.stop_types_reverse["In Netting"]
+		elif play == "NET OFF":
+			stop_type_id = settings.stop_types_reverse["Net Off"]
+		elif play == "TV TIMEOUT":
+			stop_type_id = settings.stop_types_reverse["TV Timeout"]
+		elif play == "OFFICIAL INJURY":
+			stop_type_id = settings.stop_types_reverse["Official Injury"]
+		elif play == "OFFSIDE":
+			stop_type_id = settings.stop_types_reverse["Offside"]
+		else:
+			raise Exception ("Unkown stop type for play: %s" % play)
+		
+		return [stop_type_id]
 
 
 

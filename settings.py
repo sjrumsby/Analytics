@@ -3,6 +3,7 @@
 version = "0.4"
 author = "Sean Rumsby"
 database = "data.sqlite"
+debug = 0
 
 #All of the play types to initialize database
 #All data must be formated as arrays of tuples, to work with sqlite executemany
@@ -95,6 +96,7 @@ play_types 	= [
 				(14, "SOC"),
 				(15, "EISTR"),
 				(16, "EIEND"),
+				(17, "GOFF"),
 				]
 
 shot_types 	= [
@@ -104,6 +106,9 @@ shot_types 	= [
 				(4, "Tip"),
 				(5, "Wrap"),
 				(6, "Wrist"),
+				(7, "Deflected"),
+				(8, "Tip-In"),
+				(9, "Wrap-around"),
 				]
 
 stop_types 	= [
@@ -118,6 +123,8 @@ stop_types 	= [
 				(9, "In Netting"), 
 				(10, "Net Off"),
 				(11, "TV Timeout"),
+				(12, "Official Injury"),
+				(13, "Offside"),
 				]
 
 strength_types = [
@@ -171,7 +178,10 @@ shortNameToID = {	"ANA" : 1,
 					"TOR" : 27,
 					"VAN" : 28,
 					"WSH" : 29,
-					"WPG" : 30
+					"WPG" : 30,
+					"T.B" : 26,
+					"L.A" : 13,
+					"N.J" : 17
 				}
 
 longNameToID = {	"ANAHEIM DUCKS" : 1,

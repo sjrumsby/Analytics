@@ -1,4 +1,6 @@
+app.spec
 reports
 buildDatabase.py
 *.pyc
-
+build
+dist
