@@ -250,5 +250,5 @@ longNameToShortName = {	"ANAHEIM DUCKS" : "ANA",
 					}
 
 idToShortName = dict((v,k) for k,v in shortNameToID.iteritems())
-idToLongName = dict((v,k) for k,v in shortNameToID.iteritems())
+idToLongName = dict((v,k) for k,v in longNameToID.iteritems())
 shortNameToLongName = dict((v,k) for k,v in longNameToShortName.iteritems())

@@ -14,7 +14,8 @@ class Skater():
 	points = 0
 	plusMinus = 0
 	
-	def __init__(self, nhlID):	
+	def __init__(self, nhlID):
+		print "Opening database"
 		if os.path.exists(settings.database):
 			self.con = sqlite3.connect(settings.database)
 			self.c = self.con.cursor()
@@ -39,3 +40,13 @@ class Skater():
 		self.position = row[1]
 		self.teamShort = row[2]
 		self.team = row[3]
+	
+	def printSelf(self):
+		print "Name: %s" % self.name
+		print "Position: %s" % self.position
+		print "Team: %s" % self.team
+		print "Games Played: %s" % self.gamesPlayed
+		print "Goals: %s" % self.goals
+		print "Assists: %s" % self.assists
+		print "Points: %s" % self.points
+		print "Plus Minus: %s" % self.plusMinus

@@ -36,10 +36,11 @@ class Game():
 		self.seasonID = seasonID
 		
 		self.c.execute("SELECT * FROM game WHERE season_code = %s AND year_code = %s AND game_code = %s" % (seasonID, yearID, gameID))
-		row = self.c.fetchone()
+		row = self.c.fetchall()
 		
 		if row != None:
 			if len(row) == 1:
+				row = row[0]
 				self.homeTeam = row[4]
 				self.homeScore = row[5]
 				self.awayTeam = row[6]
@@ -47,10 +48,13 @@ class Game():
 				self.startTime = row[8]
 				self.endTime = row[9]
 				self.attendance = row[10]
-			else:
+			elif len(row) > 1:
 				raise Exception("More than one game found")
-		else:
-			self.create()
+			elif len(row) == 0:
+				print "Creating game"
+				self.create()
+			else:
+				raise Exception("An unknown error occured creating game with gameID = %s, seasonID = %s, yearID = %s" % (self.gameID, self.seasonID, self.yearID))
 		
 		self.con.commit()
 
@@ -60,9 +64,10 @@ class Game():
 			url = "http://www.nhl.com/scores/htmlreports/" + self.yearID + "/GS" + self.seasonID + self.gameID + ".HTM"
 			try:
 				req = urlopen(url)
+				sum_html = req.read()
 			except:
 				print url
-			sum_html = req.read()
+			
 		else:
 			f = open(fp, 'r')
 			sum_html = f.read()

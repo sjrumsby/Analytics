@@ -4,3 +4,4 @@ buildDatabase.py
 *.pyc
 build
 dist
+testGame.py

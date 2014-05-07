@@ -1,6 +1,7 @@
 from PyQt4 import QtCore
 from PyQt4 import QtGui
-from models import *
+import game
+import skater
 import settings
 import sqlite3
 import os.path
@@ -132,9 +133,9 @@ class teamsBox(QtGui.QDialog):
 		if column == 0:
 			skaterPopUp = QtGui.QDialog(self.parent)
 			cell = self.rosterTable.item(row, column)
+			skaterPopUpLayout = QtGui.QVBoxLayout()
 			try:
-				s = Skater(str(cell.text()))
-				skaterPopUpLayout = QtGui.QVBoxLayout()
+				s = skater.Skater(str(cell.text()))
 
 				teamWidget = QtGui.QWidget()
 				teamRowLayout = QtGui.QHBoxLayout()
@@ -200,9 +201,15 @@ class teamsBox(QtGui.QDialog):
 				skaterPopUpLayout.addWidget(pointsWidget)
 				skaterPopUpLayout.addWidget(plusMinusWidget)
 			
-			except:
-				errorLabel = QtGui.QLabel("Error created skater")
-				skaterPopUpLayout.addWidget(errorLabel)
+			except Exception as e:
+				errorWidget = QtGui.QWidget()
+				errorLayout = QtGui.QHBoxLayout()
+				errorLabel = QtGui.QLabel("Error creating skater")
+				errorMsg = QtGui.QLabel(str(e))
+				errorLayout.addWidget(errorLabel)
+				errorLayout.addWidget(errorMsg)
+				errorWidget.setLayout(errorLayout)
+				skaterPopUpLayout.addWidget(errorWidget)
 			
 			skaterPopUp.setLayout(skaterPopUpLayout)
 			skaterPopUp.setMinimumWidth(250)
