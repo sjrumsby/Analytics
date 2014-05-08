@@ -1,14 +1,58 @@
 import game
+import HTMLParser
+from HTMLParser import HTMLParser
+from urllib2 import urlopen
+import os
+import schema
 import settings
 import sqlite3
-import schema
-import os
 import time
+
+class playerParser(HTMLParser):
+	def __init__(self):
+		HTMLParser.__init__(self)
+		self.table = 0
+		self.rec = 0
+		self.player_data = []
+		self.player = []
+		self.count = 0
+
+	def handle_starttag(self, tag, attributes):
+		if tag == "table":
+			for name, value in attributes:
+				if name == "class" and value == "data stats":
+					self.table = 1
+					
+		if self.table:
+			if tag == 'tr':
+				self.rec = 1
+			if self.count == 1:
+				for name, value in attributes:
+					if name=='href':
+						id = value.split('=')
+						id = id[1]
+						self.player_data.append(id)
+
+	def handle_data(self, data):
+		if self.rec:
+			self.player_data.append(data)
+			self.count = self.count + 1
+
+	def handle_endtag(self, tag):
+		if tag == 'tr' and self.rec:
+			if '\nPlayer\n' not in self.player_data and ' | ' not in self.player_data:
+				self.player.append(self.player_data)
+			self.rec = 0
+			self.player_data = []
+			self.count = 0
+		if tag == 'tbody':
+			self.table = 0
 
 seasonID = "02"
 gameID = "0001"
 yearID = "20132014"
 
+startTime = time.time()
 os.remove(settings.database)
 con = sqlite3.connect(settings.database)
 c = con.cursor()
@@ -75,8 +119,61 @@ for x in settings.zone_types:
 con.commit()
 print "Done. (%.3f s)" % float(time.time() - st)
 
-g = game.Game(gameID, yearID, seasonID)
-print g.id
+st = time.time()
+print "Adding all players from nhl.com..."
+
+players = []
+url = "http://www.nhl.com/ice/playerstats.htm?fetchKey=20142ALLSASALL&viewName=rtssPlayerStats&sort=gamesPlayed&pg="
+
+for i in range(1,29):
+	uri = url + str(i)
+	p = playerParser()
+	req = urlopen(uri)
+	html = req.read()
+	p.feed(html)
+	
+	for y in p.player:
+		nhl_id = int(y[1])
+		name = y[2]
+		
+		if y[3].find(",") > 0:
+			parts = y[3].split(", ")
+			team = parts[-1]
+		else:
+			team = y[3]
+		players.append( [nhl_id, name, settings.shortNameToID[team], y[4]] )
+
+url = "http://www.nhl.com/ice/playerstats.htm?fetchKey=20142ALLGAGALL&viewName=summary&sort=wins&pg="
+
+for i in range(1,4):
+	uri = url + str(i)
+	p = playerParser()
+	req = urlopen(uri)
+	html = req.read()
+	p.feed(html)
+	data = []
+	
+	for y in p.player:
+		nhl_id = int(y[1])
+		name = y[2]
+		
+		if y[3].find(",") > 0:
+			parts = y[3].split(", ")
+			team = parts[-1]
+		else:
+			team = y[3]
+		players.append( [nhl_id, name, settings.shortNameToID[team], 'G'] )
+
+c.executemany('insert into skater (nhl_id, name, hockey_team_id, position) values (?, ?, ?, ?)', players)
+con.commit()
+print "Done. (%.3f s)" % float(time.time() - st)
+
+
+for i in range(1, 101):
+	st = time.time()
+	print "Creating game: %s..." % i
+	g = game.Game(str(i).zfill(4), yearID, seasonID)
+	print "Done. (%.3f s)" % float(time.time() - st)
 
 c.execute("SELECT * FROM game WHERE season_code = %s AND year_code = %s AND game_code = %s" % (seasonID, yearID, gameID))
 generalRow = c.fetchone()
@@ -95,3 +192,5 @@ rows = c.fetchall()
 print "Shots Data:"
 for x in rows:
 	print x
+	
+print "All games added. (%.3f)" % float(time.time() - startTime)

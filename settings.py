@@ -125,6 +125,13 @@ stop_types 	= [
 				(11, "TV Timeout"),
 				(12, "Official Injury"),
 				(13, "Offside"),
+				(14, "Referee or Linesman"),
+				(15, "Player Equipment"),
+				(16, "Visitor Timeout"),
+				(17, "Home Timeout"),
+				(18, "Clock Problem"),
+				(19, "Video Review"),
+				(20, "Rink Repair"),
 				]
 
 strength_types = [

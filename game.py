@@ -51,7 +51,6 @@ class Game():
 			elif len(row) > 1:
 				raise Exception("More than one game found")
 			elif len(row) == 0:
-				print "Creating game"
 				self.create()
 			else:
 				raise Exception("An unknown error occured creating game with gameID = %s, seasonID = %s, yearID = %s" % (self.gameID, self.seasonID, self.yearID))
@@ -348,7 +347,7 @@ class Game():
 		
 		zone_id = self.convertZoneName(zone)
 		
-		if settings.shortNameToID[winningTeam] == self.homeTeamID:
+		if settings.shortNameToID[self.convertHockeyTeamName(winningTeam)] == self.homeTeamID:
 			winningTeamID = self.homeTeam
 			losingTeamID = self.awayTeam
 		else:
@@ -365,7 +364,7 @@ class Game():
 		playerTwoTeam = self.convertHockeyTeamName(playerTwoParts[0][0:3].strip())
 		playerTwoNumber = playerTwoParts[1][0:2].strip()
 
-		if self.homeTeamID == settings.shortNameToID[playerOneTeam]:
+		if self.homeTeamID == settings.shortNameToID[self.convertHockeyTeamName(playerOneTeam)]:
 			winner = self.homeTeamSkaters[playerOneNumber]
 			loser = self.awayTeamSkaters[playerTwoNumber]
 		else:
@@ -383,7 +382,7 @@ class Game():
 		shot_type_id = settings.shot_types_reverse[parts[1].strip()]
 		zone_type_id = self.convertZoneName(parts[2].split(". ")[0].strip())
 				
-		if self.homeTeamID == settings.shortNameToID[shootingTeam]:
+		if self.homeTeamID == settings.shortNameToID[self.convertHockeyTeamName(shootingTeam)]:
 			shooter = self.homeTeamSkaters[shooter]
 			blocker = self.awayTeamSkaters[blocker]
 		else:
@@ -410,7 +409,7 @@ class Game():
 			zone_type_id = self.convertZoneName(parts[3].split(". ")[0].strip())
 			distance = parts[4].split(" ")[0].strip()
 
-		if self.homeTeamID == settings.shortNameToID[team]:
+		if self.homeTeamID == settings.shortNameToID[ self.convertHockeyTeamName(team)]:
 			shooter = self.homeTeamSkaters[shooter]
 		else:
 			shooter = self.awayTeamSkaters[shooter]
@@ -441,7 +440,7 @@ class Game():
 		zone_type_id = self.convertZoneName(parts[3].split(". ")[0].strip())
 		distance = parts[4].split(" ")[0].strip()
 		
-		if self.homeTeamID == settings.shortNameToID[team]:
+		if self.homeTeamID == settings.shortNameToID[self.convertHockeyTeamName(team)]:
 			shooter = self.homeTeamSkaters[shooter]
 		else:
 			shooter = self.awayTeamSkaters[shooter]
@@ -456,7 +455,7 @@ class Game():
 		hittee = parts[2][0:2].strip()
 		zone_type_id = self.convertZoneName(parts[2].split(", ")[1].split(". ")[0].strip())
 		
-		if self.homeTeamID == settings.shortNameToID[team]:
+		if self.homeTeamID == settings.shortNameToID[self.convertHockeyTeamName(team)]:
 			hitter = self.homeTeamSkaters[hitter]
 			hittee = self.awayTeamSkaters[hittee]
 		else:
@@ -494,8 +493,22 @@ class Game():
 			stop_type_id = settings.stop_types_reverse["Official Injury"]
 		elif play == "OFFSIDE":
 			stop_type_id = settings.stop_types_reverse["Offside"]
+		elif play == "REFEREE OR LINESMAN":
+			stop_type_id = settings.stop_types_reverse["Referee or Linesman"]
+		elif play == "PLAYER EQUIPMENT":
+			stop_type_id = settings.stop_types_reverse["Player Equipment"]
+		elif play == "VISITOR TIMEOUT":
+			stop_type_id = settings.stop_types_reverse["Visitor Timeout"]
+		elif play == "HOME TIMEOUT":
+			stop_type_id = settings.stop_types_reverse["Home Timeout"]
+		elif play == "CLOCK PROBLEM":
+			stop_type_id = settings.stop_types_reverse["Clock Problem"]
+		elif play == "VIDEO REVIEW":
+			stop_type_id = settings.stop_types_reverse["Video Review"]
+		elif play == "RINK REPAIR":
+			stop_type_id = settings.stop_types_reverse["Rink Repair"]
 		else:
-			raise Exception ("Unkown stop type for play: %s" % play)
+			raise Exception ("Unknown stop type for play: %s" % play)
 		
 		return [stop_type_id]
 
