@@ -187,7 +187,7 @@ class Game():
 						stopPlay = [self.c.lastrowid]
 
 						for x in self.processStop(p['play'][5]):
-							hitPlay.append(x)
+							stopPlay.append(x)
 
 						insertStop.append( { 'play' : stopPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
 				else:
@@ -209,7 +209,7 @@ class Game():
 						for x in self.processBlock(p['play'][6]):
 							blockPlay.append(x)
 
-						insertBlock.append( { 'play' : faceOffPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
+						insertBlock.append( { 'play' : blockPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
 
 					elif p['play'][5] == "SHOT":
 						shotPlay = [self.c.lastrowid]
@@ -246,7 +246,7 @@ class Game():
 				print p
 
 		for x in insertFaceOff:
-			executeString = "INSERT INTO face_off(play_id, winner, loser, zone_id) VALUES (%s, %s, %s, %s)" % (x['play'][0], x['play'][1], x['play'][2], x['play'][3])
+			executeString = "INSERT INTO face_off(game_id, play_id, winner, loser, zone_id) VALUES (%s, %s, %s, %s, %s)" % (self.id, x['play'][0], x['play'][1], x['play'][2], x['play'][3])
 			if settings.debug: print executeString
 			self.c.execute(executeString)
 			face_off_id = self.c.lastrowid
@@ -258,7 +258,7 @@ class Game():
 				self.c.execute("INSERT INTO away_face_off_on_ice (face_off_id, skater_id) VALUES (%s, %s)" % (face_off_id, z))
 		
 		for x in insertBlock:
-			executeString = "INSERT INTO block(shooter, blocker, shot_type_id, zone_type_id) VALUES (%s, %s, %s, %s)" % (x['play'][0], x['play'][1], x['play'][2], x['play'][3])
+			executeString = "INSERT INTO block(game_id, play_id, shooter, blocker, shot_type_id, zone_type_id) VALUES (%s, %s, %s, %s, %s, %s)" % (self.id, x['play'][0], x['play'][1], x['play'][2], x['play'][3], x['play'][4])
 			if settings.debug: print executeString
 			self.c.execute(executeString)
 			block_id = self.c.lastrowid
@@ -270,7 +270,7 @@ class Game():
 				self.c.execute("INSERT INTO away_block_on_ice (block_id, skater_id) VALUES (%s, %s)" % (block_id, z))
 
 		for x in insertShot:
-			executeString = "INSERT INTO shot(shooter, shot_type_id, zone_type_id, distance) VALUES (%s, %s, %s, %s)" % (x['play'][0], x['play'][1], x['play'][2], x['play'][3])
+			executeString = "INSERT INTO shot(game_id, play_id, shooter, shot_type_id, zone_type_id, distance) VALUES (%s, %s, %s, %s, %s, %s)" % (self.id, x['play'][0], x['play'][1], x['play'][2], x['play'][3], x['play'][4])
 			if settings.debug: print executeString
 			self.c.execute(executeString)
 			shot_id = self.c.lastrowid
@@ -282,7 +282,7 @@ class Game():
 				self.c.execute("INSERT INTO away_shot_on_ice (shot_id, skater_id) VALUES (%s, %s)" % (shot_id, z))
 				
 		for x in insertMiss:
-			executeString = "INSERT INTO miss(shooter, miss_type_id, shot_type_id, zone_type_id, distance) VALUES (%s, %s, %s, %s, %s)" % (x['play'][0], x['play'][1], x['play'][2], x['play'][3], x['play'][4])
+			executeString = "INSERT INTO miss(game_id, play_id, shooter, miss_type_id, shot_type_id, zone_type_id, distance) VALUES (%s, %s, %s, %s, %s, %s, %s)" % (self.id, x['play'][0], x['play'][1], x['play'][2], x['play'][3], x['play'][4], x['play'][5])
 			if settings.debug: print executeString
 			self.c.execute(executeString)
 			miss_id = self.c.lastrowid
@@ -294,7 +294,7 @@ class Game():
 				self.c.execute("INSERT INTO away_miss_on_ice (miss_id, skater_id) VALUES (%s, %s)" % (miss_id, z))
 				
 		for x in insertHit:
-			executeString = "INSERT INTO hit(hitter, hittee, zone_type_id) VALUES (%s, %s, %s)" % (x['play'][0], x['play'][1], x['play'][2])
+			executeString = "INSERT INTO hit(game_id, play_id, hitter, hittee, zone_type_id) VALUES (%s, %s, %s, %s, %s)" % (self.id, x['play'][0], x['play'][1], x['play'][2], x['play'][3])
 			if settings.debug: print executeString
 			self.c.execute(executeString)
 			hit_id = self.c.lastrowid
@@ -306,7 +306,7 @@ class Game():
 				self.c.execute("INSERT INTO away_hit_on_ice (hit_id, skater_id) VALUES (%s, %s)" % (hit_id, z))
 				
 		for x in insertStop:
-			executeString = "INSERT INTO stop(stop_type_id) VALUES (%s)" % x['play'][0]
+			executeString = "INSERT INTO stop(game_id, play_id, stop_type_id) VALUES (%s, %s, %s)" % (self.id, x['play'][0], x['play'][1])
 			if settings.debug: print executeString
 			self.c.execute(executeString)
 			stop_id = self.c.lastrowid
@@ -389,7 +389,7 @@ class Game():
 		else:
 			blocker = self.homeTeamSkaters[blocker]
 			shooter = self.awayTeamSkaters[shooter]
-			
+		
 		return [shooter, blocker, shot_type_id, zone_type_id]
 
 	def processShot(self, play):
