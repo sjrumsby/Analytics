@@ -59,3 +59,33 @@ miss_table				= 'CREATE TABLE "miss" ("id" integer NOT NULL PRIMARY KEY, "game_i
 home_miss_on_ice 		= 'CREATE TABLE "home_miss_on_ice" ("id" integer NOT NULL PRIMARY KEY, "miss_id" integer NOT NULL REFERENCES "miss" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
 
 away_miss_on_ice 		= 'CREATE TABLE "away_miss_on_ice" ("id" integer NOT NULL PRIMARY KEY, "miss_id" integer NOT NULL REFERENCES "miss" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+goal_table				= 'CREATE TABLE "goal" ("id" integer NOT NULL PRIMARY KEY, "game_id" integer NOT NULL REFERENCES "game" ("id"), "play_id" integer NOT NULL REFERENCES "play" ("id"), "scorer" NOT NULL REFERENCES "skater" ("id"), "first_assist" REFERENCES "skater" ("id"), "second_assist" REFERENCES "skater" ("id") );'
+
+home_goal_on_ice 		= 'CREATE TABLE "home_goal_on_ice" ("id" integer NOT NULL PRIMARY KEY, "goal_id" integer NOT NULL REFERENCES "goal" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+away_goal_on_ice 		= 'CREATE TABLE "away_goal_on_ice" ("id" integer NOT NULL PRIMARY KEY, "goal_id" integer NOT NULL REFERENCES "goal" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+give_table				= 'CREATE TABLE "give" ("id" integer NOT NULL PRIMARY KEY, "game_id" integer NOT NULL REFERENCES "game" ("id"), "play_id" integer NOT NULL REFERENCES "play" ("id"), "giver" NOT NULL REFERENCES "skater" ("id") );'
+
+home_give_on_ice 		= 'CREATE TABLE "home_give_on_ice" ("id" integer NOT NULL PRIMARY KEY, "give_id" integer NOT NULL REFERENCES "give" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+away_give_on_ice 		= 'CREATE TABLE "away_give_on_ice" ("id" integer NOT NULL PRIMARY KEY, "give_id" integer NOT NULL REFERENCES "give" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+take_table				= 'CREATE TABLE "take" ("id" integer NOT NULL PRIMARY KEY, "game_id" integer NOT NULL REFERENCES "game" ("id"), "play_id" integer NOT NULL REFERENCES "play" ("id"), "taker" NOT NULL REFERENCES "skater" ("id") );'
+
+home_take_on_ice 		= 'CREATE TABLE "home_take_on_ice" ("id" integer NOT NULL PRIMARY KEY, "take_id" integer NOT NULL REFERENCES "take" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+away_take_on_ice 		= 'CREATE TABLE "away_take_on_ice" ("id" integer NOT NULL PRIMARY KEY, "take_id" integer NOT NULL REFERENCES "take" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+pstr_table				= 'CREATE TABLE "pstr" ("id" integer NOT NULL PRIMARY KEY, "game_id" integer NOT NULL REFERENCES "game" ("id"), "play_id" integer NOT NULL REFERENCES "play" ("id"), "time" varchar(16) NOT NULL );'
+
+home_pstr_on_ice 		= 'CREATE TABLE "home_pstr_on_ice" ("id" integer NOT NULL PRIMARY KEY, "pstr_id" integer NOT NULL REFERENCES "pstr" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+away_pstr_on_ice 		= 'CREATE TABLE "away_pstr_on_ice" ("id" integer NOT NULL PRIMARY KEY, "pstr_id" integer NOT NULL REFERENCES "pstr" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+pend_table				= 'CREATE TABLE "pend" ("id" integer NOT NULL PRIMARY KEY, "game_id" integer NOT NULL REFERENCES "game" ("id"), "play_id" integer NOT NULL REFERENCES "play" ("id"), "time" varchar(16) NOT NULL );'
+
+home_pend_on_ice 		= 'CREATE TABLE "home_pend_on_ice" ("id" integer NOT NULL PRIMARY KEY, "pend_id" integer NOT NULL REFERENCES "pend" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'
+
+away_pend_on_ice 		= 'CREATE TABLE "away_pend_on_ice" ("id" integer NOT NULL PRIMARY KEY, "pend_id" integer NOT NULL REFERENCES "pend" ("id"), "skater_id" integer NOT NULL REFERENCES "skater" ("id") );'

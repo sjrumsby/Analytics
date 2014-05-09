@@ -91,6 +91,21 @@ c.execute(schema.away_stop_on_ice)
 c.execute(schema.miss_table)
 c.execute(schema.home_miss_on_ice)
 c.execute(schema.away_miss_on_ice)
+c.execute(schema.goal_table)
+c.execute(schema.home_goal_on_ice)
+c.execute(schema.away_goal_on_ice)
+c.execute(schema.give_table)
+c.execute(schema.home_give_on_ice)
+c.execute(schema.away_give_on_ice)
+c.execute(schema.take_table)
+c.execute(schema.home_take_on_ice)
+c.execute(schema.away_take_on_ice)
+c.execute(schema.pstr_table)
+c.execute(schema.home_pstr_on_ice)
+c.execute(schema.away_pstr_on_ice)
+c.execute(schema.pend_table)
+c.execute(schema.home_pend_on_ice)
+c.execute(schema.away_pend_on_ice)
 
 for x in settings.hockey_teams:
 	c.execute('INSERT INTO hockey_team(id, name, long_name) VALUES (%s, "%s", "%s")' % (x[0], x[1], x[2]))
@@ -125,7 +140,7 @@ print "Adding all players from nhl.com..."
 players = []
 url = "http://www.nhl.com/ice/playerstats.htm?fetchKey=20142ALLSASALL&viewName=rtssPlayerStats&sort=gamesPlayed&pg="
 
-for i in range(1,29):
+for i in range(1,2):
 	uri = url + str(i)
 	p = playerParser()
 	req = urlopen(uri)
@@ -141,11 +156,15 @@ for i in range(1,29):
 			team = parts[-1]
 		else:
 			team = y[3]
-		players.append( [nhl_id, name, settings.shortNameToID[team], y[4]] )
+		
+		player = [nhl_id, name, settings.shortNameToID[team], y[4]]
+		
+		if player not in players:
+			players.append(player)
 
 url = "http://www.nhl.com/ice/playerstats.htm?fetchKey=20142ALLGAGALL&viewName=summary&sort=wins&pg="
 
-for i in range(1,4):
+for i in range(1,2):
 	uri = url + str(i)
 	p = playerParser()
 	req = urlopen(uri)
@@ -162,14 +181,17 @@ for i in range(1,4):
 			team = parts[-1]
 		else:
 			team = y[3]
-		players.append( [nhl_id, name, settings.shortNameToID[team], 'G'] )
+		player = [nhl_id, name, settings.shortNameToID[team], 'G']
+		
+		if player not in players:
+			players.append(player)
 
 c.executemany('insert into skater (nhl_id, name, hockey_team_id, position) values (?, ?, ?, ?)', players)
 con.commit()
 print "Done. (%.3f s)" % float(time.time() - st)
 
 
-for i in range(1, 101):
+for i in range(1,25):
 	st = time.time()
 	print "Creating game: %s..." % i
 	g = game.Game(str(i).zfill(4), yearID, seasonID)
@@ -186,11 +208,5 @@ print "\tAway Score: %s" % generalRow[7]
 print "\tAttendance: %s" % generalRow[10]
 
 print "\n"
-
-c.execute("SELECT * FROM shot WHERE game_id = %s" % g.id)
-rows = c.fetchall()
-print "Shots Data:"
-for x in rows:
-	print x
 	
 print "All games added. (%.3f)" % float(time.time() - startTime)

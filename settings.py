@@ -109,6 +109,7 @@ shot_types 	= [
 				(7, "Deflected"),
 				(8, "Tip-In"),
 				(9, "Wrap-around"),
+				(10, "Undefined"),
 				]
 
 stop_types 	= [

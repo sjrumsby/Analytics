@@ -183,24 +183,8 @@ class summaryParser(HTMLParser):
 
 		self.goal_rec = 0
 		self.goal_row = []
-		self.goal_data = []
-
-		self.on_ice_rec = 0
-		self.on_ice_row = []
-
-		self.penalty_rec = 0
-		self.penalty_row = []
-		self.away_penalty_data = []
-		self.home_penalty_data = []
-		self.penalty_header_count = 0
-
-		self.goalie_rec = 0
-		self.goalie_row = []
-		self.goalie_data = []
-
-		self.period_rec = 0
-		self.period_row = []
-		self.period_data = []
+		self.goal_row_rec = 0
+		self.goal_row_data = []
 
 		self.stars_rec = 0
 		self.stars_row = []
@@ -219,14 +203,9 @@ class summaryParser(HTMLParser):
 				if name == "id" and value == "Home":
 					self.home_rec = 1
 					self.summary_rec = 0
-	
-		if self.goal_rec or self.on_ice_rec:
-			if tag == "font":
-				for name,value in attributes:
-					if name == "title":
-						self.on_ice_rec = 1
-						self.on_ice_row.append(value.split(" - ")[-1])
-						self.goal_rec = 0
+		
+		if tag == "tr" and self.goal_rec:
+			self.goal_row_rec = 1
 
 	def handle_data(self, data):
 		if self.home_rec:
@@ -244,69 +223,35 @@ class summaryParser(HTMLParser):
 					self.append = 0
 				else:
 					self.summary_data.append(data)
+		
+		if "SCORING SUMMARY" in data:
+			self.goal_rec = 1
+			
+		if "PENALTY SUMMARY" in data:
+			self.goal_rec = 0
 
 		if self.stars_rec:
 			if data != "\r\n" and data != "\r\r\n":
 				self.stars_row.append(data)
 
-		if "SCORING SUMMARY" in data:
-			self.home_rec = 0
-
 		if "3 STARS" in data:
 			self.stars_rec = 1
+		
+		if self.goal_row_rec:
+			if data != "\r\n" and data != "\r\r\n" and data != ", ":
+				self.goal_row_data.append(data)
 	
 	def handle_endtag(self, tag):
-		if self.on_ice_rec or self.goal_rec:
-			if tag == "tr":
-				if self.goal_row != [] and len(self.goal_row) > 2 and "Goal Scorer" not in self.goal_row:
-					self.goal_row.append(self.on_ice_row)
-					self.goal_data.append(self.goal_row)
-				self.goal_row = []
-				self.on_ice_row = []
-				self.on_ice_rec = 0
-				self.goal_rec = 1
-
-		if self.penalty_rec:
-			if tag == "tr":
-				if "Player" in self.penalty_row:
-					self.penalty_header_count += 1
-				else:
-					if self.penalty_row != [] and 'TOT' not in self.penalty_row and "Player" not in self.penalty_row:
-						if self.penalty_header_count == 1:
-							if len(self.penalty_row) == 2:
-								temp_row = self.away_penalty_data.pop()
-								for x in self.penalty_row:
-									temp_row.append(x)
-								self.away_penalty_data.append(temp_row)
-							else:
-								self.away_penalty_data.append(self.penalty_row)
-						else:
-							if len(self.penalty_row) == 2:
-								temp_row = self.home_penalty_data.pop()
-								for x in self.penalty_row:
-									temp_row.append(x)
-								self.home_penalty_data.append(temp_row)
-							else:
-								self.home_penalty_data.append(self.penalty_row)
-				self.penalty_row = []
-
-		if self.period_rec:
-			if tag == "tr":
-				if self.period_row != [] and len(self.period_row) > 1 and "Goals" not in self.period_row and "5v4" not in self.period_row and "5v5" not in self.period_row:
-					self.period_data.append(self.period_row)
-				self.period_row = []
-
-		if self.goalie_rec:
-			if tag == "tr":
-				if self.goalie_row != [] and "BUTS-LANCERS" not in self.goalie_row and "DN/SH" not in self.goalie_row:
-					self.goalie_data.append(self.goalie_row)
-				self.goalie_row = []
-
 		if self.stars_rec:
 			if tag == "tr":
 				if self.stars_row != [] and len(self.stars_row) == 4:
 					self.stars_data.append(self.stars_row)
 				self.stars_row = []
+		if self.goal_row_rec and tag == "tr":
+			self.goal_row_rec = 0
+			if "Time" not in self.goal_row_data and len(self.goal_row_data) > 4:
+				self.goal_row.append(self.goal_row_data)
+			self.goal_row_data = []
 				
 	def handle_entityref(self, name):
 		if name == "amp":

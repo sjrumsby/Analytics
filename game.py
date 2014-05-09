@@ -91,6 +91,7 @@ class Game():
 		
 		if not self.attendance.isdigit():
 			self.attendance = 0
+			print "No attendance found"
 		
 		executeString = "INSERT INTO game(season_code, year_code, game_code, home_team_id, home_score, away_team_id, away_score, start_time, end_time, attendance) VALUES (%s, %s, %s, %s, %s, %s, %s, '%s', '%s', %s)" % (self.seasonID, self.yearID, self.gameID, self.homeTeamID, self.homeScore, self.awayTeamID, self.awayScore, self.startTime, self.endTime, self.attendance)
 		self.c.execute(executeString)
@@ -166,13 +167,18 @@ class Game():
 		playParse = parsers.playParser()
 		playParse.feed(play_html)
 		
-		insertPlays 	= []
-		insertFaceOff	= []
-		insertBlock	 	= []
-		insertShot 		= []
-		insertMiss 		= []
-		insertHit 		= []
-		insertStop 		= []
+		insertPlays 		= []
+		insertFaceOff		= []
+		insertBlock	 		= []
+		insertShot 			= []
+		insertMiss 			= []
+		insertHit 			= []
+		insertStop 			= []
+		insertGoal			= []
+		insertTake			= []
+		insertGive			= []
+		insertPeriodEnd 	= []
+		insertPeriodStart 	= []
 		
 		try:
 			for p in playParse.plays:
@@ -189,6 +195,47 @@ class Game():
 							stopPlay.append(x)
 
 						insertStop.append( { 'play' : stopPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
+
+					elif p['play'][4] == "PSTR":
+						periodStartPlay = [self.c.lastrowid]
+						
+						for x in self.processPeriodStart(p['play'][5]):
+							periodStartPlay.append(x)
+						
+						insertPeriodEnd.append(  { 'play' : periodStartPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
+					
+					elif p['play'][4] == "PEND":
+						periodEndPlay = [self.c.lastrowid]
+						
+						for x in self.processPeriodEnd(p['play'][5]):
+							periodEndPlay.append(x)
+						
+						insertPeriodEnd.append(  { 'play' : periodEndPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
+					
+					elif p['play'][4] == "EISTR":
+						print "Found an EISTR"
+						continue
+					#These are a useless play
+					
+					elif p['play'][4] == "EIEND":
+						print "Found an EIEND"
+						continue
+					#These are useless as well
+					
+					elif p['play'][4] == "GEND":
+						print "GEND"
+						continue
+					#These are useless too
+					
+					elif p['play'][4] == "GOFF":
+						print "GOFF"
+						continue
+					#also useless
+					
+					elif p['play'][4] == "SOC":
+						print "SOC"
+						continue
+					#more useless
 				else:
 					executeString = "INSERT INTO play(game_id, event_id, period, time, strength_id) VALUES (%s, %s, %s, '%s', %s)" % (self.id, settings.play_types_reverse[p['play'][5]], p['play'][1], p['play'][4], settings.strength_types_reverse[p['play'][2]] )
 					if settings.debug: print executeString
@@ -233,6 +280,35 @@ class Game():
 							hitPlay.append(x)
 
 						insertHit.append( { 'play' : hitPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
+					
+					elif p['play'][5] == "GOAL":
+						goalPlay = [self.c.lastrowid]
+						goalShotPlay = [self.c.lastrowid]
+						
+						for x in self.processGoal(p['play'][6]):
+							goalPlay.append(x)
+							
+						for x in self.processGoalShot(p['play'][6]):
+							goalShotPlay.append(x)
+						
+						insertGoal.append( { 'play' : goalPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
+						insertShot.append( { 'play' : goalShotPlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
+					
+					elif p['play'][5] == "TAKE":
+						takePlay = [ self.c.lastrowid ]
+						
+						for x in self.processTakeaway(p['play'][6], p['play'][7]):
+							takePlay.append(x)
+
+						insertTake.append( { 'play' : takePlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
+					
+					elif p['play'][5] == "GIVE":
+						givePlay = [ self.c.lastrowid ]
+						
+						for x in self.processGiveaway(p['play'][6], p['play'][7]):
+							givePlay.append(x)
+
+						insertGive.append( { 'play' : givePlay, 'home' : [self.homeTeamSkaters[x] for x in p['home'] ],  'away' : [self.awayTeamSkaters[x] for x in p['away'] ] } )
 
 		except Exception as e:
 			if p['play'][4] != "GOFF":
@@ -315,7 +391,68 @@ class Game():
 				
 			for z in x['away']:
 				self.c.execute("INSERT INTO away_stop_on_ice (stop_id, skater_id) VALUES (%s, %s)" % (stop_id, z))
+		
+		for x in insertGoal:
+			executeString = "INSERT INTO goal(game_id, play_id, scorer) VALUES (%s, %s, %s)" % (self.id, x['play'][0], x['play'][1])
+			if settings.debug: print executeString
+			self.c.execute(executeString)
+			goal_id = self.c.lastrowid
+			
+			for y in x['home']:
+				self.c.execute("INSERT INTO home_goal_on_ice (goal_id, skater_id) VALUES (%s, %s)" % (goal_id, y))
 				
+			for z in x['away']:
+				self.c.execute("INSERT INTO away_goal_on_ice (goal_id, skater_id) VALUES (%s, %s)" % (goal_id, z))
+		
+		for x in insertGive:
+			executeString = "INSERT INTO give(game_id, play_id, giver) VALUES (%s, %s, %s)" % (self.id, x['play'][0], x['play'][1])
+			if settings.debug: print executeString
+			self.c.execute(executeString)
+			give_id = self.c.lastrowid
+			
+			for y in x['home']:
+				self.c.execute("INSERT INTO home_give_on_ice (give_id, skater_id) VALUES (%s, %s)" % (give_id, y))
+							
+			for z in x['away']:
+				self.c.execute("INSERT INTO away_give_on_ice (give_id, skater_id) VALUES (%s, %s)" % (give_id, z))
+			
+		for x in insertTake:
+			executeString = "INSERT INTO take(game_id, play_id, taker) VALUES (%s, %s, %s)" % (self.id, x['play'][0], x['play'][1])
+			if settings.debug: print executeString
+			self.c.execute(executeString)
+			take_id = self.c.lastrowid
+			
+			for y in x['home']:
+				self.c.execute("INSERT INTO home_take_on_ice (take_id, skater_id) VALUES (%s, %s)" % (take_id, y))
+							
+			for z in x['away']:
+				self.c.execute("INSERT INTO away_take_on_ice (take_id, skater_id) VALUES (%s, %s)" % (take_id, z))
+		
+		for x in insertPeriodStart:
+			executeString = "INSERT INTO pstr(game_id, play_id, time) VALUES (%s, %s, %s)" % (self.id, x['play'][0], x['play'][1])
+			if settings.debug: print executeString
+			self.c.execute(executeString)
+			pstr_id = self.c.lastrowid
+			
+			for y in x['home']:
+				self.c.execute("INSERT INTO home_pstr_on_ice (pstr_id, skater_id) VALUES (%s, %s)" % (pstr_id, y))
+							
+			for z in x['away']:
+				self.c.execute("INSERT INTO away_pstr_on_ice (pstr_id, skater_id) VALUES (%s, %s)" % (pstr_id, z))
+		
+		for x in insertPeriodEnd:
+			executeString = "INSERT INTO pend(game_id, play_id, time) VALUES (%s, %s, %s)" % (self.id, x['play'][0], x['play'][1])
+			if settings.debug: print executeString
+			self.c.execute(executeString)
+			pend_id = self.c.lastrowid
+			
+			for y in x['home']:
+				self.c.execute("INSERT INTO home_pend_on_ice (pend_id, skater_id) VALUES (%s, %s)" % (pend_id, y))
+							
+			for z in x['away']:
+				self.c.execute("INSERT INTO away_pend_on_ice (pend_id, skater_id) VALUES (%s, %s)" % (pend_id, z))
+		
+			
 #All of the functions for parsing the data out of individual plays
 
 	def convertHockeyTeamName(self, team):
@@ -511,10 +648,72 @@ class Game():
 			raise Exception ("Unknown stop type for play: %s" % play)
 		
 		return [stop_type_id]
+	
+	def processGoal(self, play):
+		team = play[0:3]
+		parts = play.split("#")
+		shooter = parts[1][0:2].strip()
+		if self.homeTeamID == settings.shortNameToID[self.convertHockeyTeamName(team)]:
+			shooter = self.homeTeamSkaters[shooter]
+		else:
+			shooter = self.awayTeamSkaters[shooter]
+		
+		return [shooter]
+	
+	def processGoalShot(self, play):
+		team = play[0:3]
+		parts = play.split("#")
+		shooter = parts[1][0:2].strip()
+		if self.homeTeamID == settings.shortNameToID[self.convertHockeyTeamName(team)]:
+			shooter = self.homeTeamSkaters[shooter]
+		else:
+			shooter = self.awayTeamSkaters[shooter]
+		
+		parts = parts[1].split(", ")
+		if len(parts) == 4:
+			shot_type_id = settings.shot_types_reverse[parts[1].strip()]
+			zone_type_id = self.convertZoneName(parts[2].split(". ")[0].strip())
+			distance = parts[3].split(" ")[0].strip()
+		elif len(parts) == 3:
+			shot_type_id = settings.shot_types_reverse["Undefined"]
+			zone_type_id = self.convertZoneName(parts[1].split(". ")[0].strip())
+			distance = parts[2].split(" ")[0].strip()
+		elif len(parts) == 5:
+			shot_type_id = settings.shot_types_reverse[parts[2].strip()]
+			zone_type_id = self.convertZoneName(parts[3].split(". ")[0].strip())
+			distance = parts[4].split(" ")[0].strip()
+			
+		return [shooter, shot_type_id, zone_type_id, distance]
 
-
-
-
+	def processGiveaway(self, team, play):
+		parts = play.split("#")
+		skater = parts[1][0:2].strip()
+		if self.homeTeamID == settings.shortNameToID[self.convertHockeyTeamName(team)]:
+			skater = self.homeTeamSkaters[skater]
+		else:
+			skater = self.awayTeamSkaters[skater]
+		
+		return [ skater ]
+		
+	def processTakeaway(self, team, play):
+		parts = play.split("#")
+		skater = parts[1][0:2].strip()
+		if self.homeTeamID == settings.shortNameToID[self.convertHockeyTeamName(team)]:
+			skater = self.homeTeamSkaters[skater]
+		else:
+			skater = self.awayTeamSkaters[skater]
+		
+		return [ skater ]
+		
+	def processPeriodStart(self, play):
+		parts = play.split("Local time: ")
+		time = parts[1][0:5]
+		return time
+		
+	def processPeriodEnd(self, play):
+		parts = play.split("Local time: ")
+		time = parts[1][0:5]
+		return time
 
 
 
