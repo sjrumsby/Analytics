@@ -1,9 +1,7 @@
 from PyQt4 import QtCore
 from PyQt4 import QtGui
-from models import *
-import settings
-import sqlite3
-import os.path
+import os
+import vars
 
 class homeBox(QtGui.QDialog):
 	

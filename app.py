@@ -1,11 +1,10 @@
 from PyQt4 import QtCore, QtGui
-from teamFrame import *
-from skaterFrame import *
-from playFrame import *
-from homeFrame import *
-from gamesFrame import *
-import dataScripts
-import settings
+from homeFrame import homeBox
+from gameFrame import gameBox
+from teamFrame import teamBox
+from playFrame import playBox
+from skaterFrame import skaterBox
+import vars
 
 class mainWindow(QtGui.QMainWindow):
 
@@ -100,7 +99,7 @@ class mainWindow(QtGui.QMainWindow):
 		widget = self.mainLayout.itemAt(1).widget()
 		self.mainLayout.removeWidget(widget)
 		widget.close()
-		newFrame = gamesBox(self)
+		newFrame = gameBox(self)
 		self.mainLayout.addWidget(newFrame.window)
 		self.mainLayout.update()
 		
@@ -124,7 +123,7 @@ class mainWindow(QtGui.QMainWindow):
 		widget = self.mainLayout.itemAt(1).widget()
 		self.mainLayout.removeWidget(widget)
 		widget.close()
-		newFrame = skatersBox(self)
+		newFrame = skaterBox(self)
 		self.mainLayout.addWidget(newFrame.window)
 		self.mainLayout.update()
 
@@ -132,7 +131,7 @@ class mainWindow(QtGui.QMainWindow):
 		widget = self.mainLayout.itemAt(1).widget()
 		self.mainLayout.removeWidget(widget)
 		widget.close()
-		newFrame = teamsBox(self)
+		newFrame = teamBox(self)
 		self.mainLayout.addWidget(newFrame.window)
 		self.mainLayout.update()
 
@@ -179,7 +178,7 @@ class mainWindow(QtGui.QMainWindow):
 if __name__ == '__main__':
 
 	import sys
-
+	
 	app = QtGui.QApplication(sys.argv)
 	window = mainWindow()
 	sys.exit(app.exec_())
