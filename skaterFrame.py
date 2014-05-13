@@ -1,25 +1,16 @@
 from PyQt4 import QtCore
 from PyQt4 import QtGui
-from models import *
-import settings
-import sqlite3
-import os.path
+import os
+import vars
 
-class skatersBox(QtGui.QDialog):
+class skaterBox(QtGui.QDialog):
 	
 	def __init__(self, parent):
-		super(skatersBox, self).__init__()
+		super(skaterBox, self).__init__()
 		self.parent = parent
 
-		if os.path.exists(settings.database):
-			try:
-				self.con = sqlite3.connect(settings.database)
-				self.c = self.con.cursor()
-				self.c.execute('select id, long_name from hockey_team')
-				self.teams = self.c.fetchall()
+		if os.path.exists(vars.database):
 				self.initUI()
-			except:
-				exit("Failure to connect to database")
 		else:
 			self.initNoDBUI()	
 

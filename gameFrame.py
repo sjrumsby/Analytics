@@ -3,10 +3,10 @@ from PyQt4 import QtGui
 import os
 import vars
 
-class playBox(QtGui.QDialog):
-
+class gameBox(QtGui.QDialog):
+	
 	def __init__(self, parent):
-		super(playBox, self).__init__()
+		super(gameBox, self).__init__()
 		self.parent = parent
 
 		if os.path.exists(vars.database):
@@ -15,7 +15,7 @@ class playBox(QtGui.QDialog):
 			self.initNoDBUI()	
 
 	def initNoDBUI(self):
-		self.box = QtGui.QGroupBox("Plays")
+		self.box = QtGui.QGroupBox("Games")
 		self.boxLayout = QtGui.QVBoxLayout()
 		self.boxLayout.addWidget(QtGui.QLabel("Error, no database found. Please run 'Update Database' from the tools menu"), 0, QtCore.Qt.AlignHCenter)
 		self.boxLayout.setAlignment(QtCore.Qt.AlignTop)
@@ -23,5 +23,5 @@ class playBox(QtGui.QDialog):
 		self.window = self.box
 
 	def initUI(self):
-		box = QtGui.QGroupBox("Plays")
+		box = QtGui.QGroupBox("Games")
 		self.window = box

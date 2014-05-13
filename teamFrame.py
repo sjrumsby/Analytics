@@ -1,30 +1,37 @@
 from PyQt4 import QtCore
 from PyQt4 import QtGui
-import game
-import skater
-import settings
-import sqlite3
-import os.path
+import os
+import vars
 
-class teamsBox(QtGui.QDialog):
+from django.conf import settings
+
+settings.configure(	DATABASES = 	{ 'default': {
+										'ENGINE': 'django.db.backends.sqlite3',
+										'NAME': 'data.sqlite', 
+										'USER': '',
+										'PASSWORD': '',
+										'HOST': '',
+										'PORT': '',
+    								}
+    							},
+    				INSTALLED_APPS = ('data',),
+    				)
+
+from django.db import models
+from data.models import *
+
+class teamBox(QtGui.QDialog):
 	con = None
 	c = None
 	
 	def __init__(self, parent):
-		super(teamsBox, self).__init__()
+		super(teamBox, self).__init__()
 		self.parent = parent
 		
-		if os.path.exists(settings.database):
-			try:
-				self.con = sqlite3.connect(settings.database)
-				self.c = self.con.cursor()
-				self.c.execute('select id, long_name from hockey_team')
-				self.teams = self.c.fetchall()
+		if os.path.exists(vars.database):
 				self.initUI()
-			except:
-				exit("Failure to connect to database")
 		else:
-			self.initNoDBUI()
+			self.initNoDBUI()	
 	
 	def initNoDBUI(self):
 		self.box = QtGui.QGroupBox("Teams")
@@ -62,8 +69,8 @@ class teamsBox(QtGui.QDialog):
 		self.sideBoxLayout.addWidget(self.teamLabel)
 		self.teamDropDown = QtGui.QComboBox()
 		
-		for t in self.teams:
-			self.teamDropDown.addItem(t[1], t[0])
+		for t in Hockey_Team.objects.all():
+			self.teamDropDown.addItem(t.full_name, t.id)
 			
 		self.sideBoxLayout.addWidget(self.teamDropDown)
 		
